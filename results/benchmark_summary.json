@@ -1,0 +1,163 @@
+{
+  "prototype": "AeroECAD-Agent",
+  "version": "0.2.0",
+  "configuration": {
+    "seed": 2027,
+    "cases_per_rule": 20,
+    "clean_cases": 20,
+    "mixed_cases": 50
+  },
+  "dataset": {
+    "scenario_count": 170,
+    "categories": {
+      "clean": 20,
+      "mixed_fault": 50,
+      "single_fault": 100
+    },
+    "synthetic": true,
+    "rule_count": 5
+  },
+  "modes": {
+    "full": {
+      "mode": "full",
+      "scenario_count": 170,
+      "ground_truth_violation_count": 277,
+      "tp": 277,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "clean_design_specificity": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_correctness": 1.0,
+      "traceability_completeness": 1.0,
+      "human_review_flag_coverage": 1.0,
+      "automatic_modification_count": 0,
+      "latency_ms": {
+        "mean": 0.033242941176470586,
+        "median": 0.029309,
+        "p95": 0.05393
+      },
+      "retrieval": {
+        "evaluated_queries": 0,
+        "top1_accuracy": 0.0,
+        "top3_recall": 0.0,
+        "mrr": 0.0
+      },
+      "per_rule": {
+        "AE-R001": {
+          "tp": 56,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R002": {
+          "tp": 57,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R003": {
+          "tp": 51,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R004": {
+          "tp": 57,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R005": {
+          "tp": 56,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    "retrieval_guided": {
+      "mode": "retrieval_guided",
+      "scenario_count": 170,
+      "ground_truth_violation_count": 277,
+      "tp": 277,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "clean_design_specificity": 1.0,
+      "unsupported_claim_rate": 0.0,
+      "citation_correctness": 1.0,
+      "traceability_completeness": 1.0,
+      "human_review_flag_coverage": 1.0,
+      "automatic_modification_count": 0,
+      "latency_ms": {
+        "mean": 0.06467557647058823,
+        "median": 0.031827,
+        "p95": 0.057735
+      },
+      "retrieval": {
+        "evaluated_queries": 100,
+        "top1_accuracy": 1.0,
+        "top3_recall": 1.0,
+        "mrr": 1.0
+      },
+      "per_rule": {
+        "AE-R001": {
+          "tp": 56,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R002": {
+          "tp": 57,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R003": {
+          "tp": 51,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R004": {
+          "tp": 57,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "AE-R005": {
+          "tp": 56,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    }
+  },
+  "interpretation": "Preliminary results validate execution within the encoded fictional rule scope; they do not establish certification or proprietary-data performance."
+}

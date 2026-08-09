@@ -1,0 +1,618 @@
+{
+  "prototype": "AeroECAD-Agent",
+  "version": "0.2.0",
+  "profile": "pilot",
+  "scenario_count": 40,
+  "models": {
+    "qwen2.5:7b": {
+      "llm_only": {
+        "scenario_count": 40,
+        "tp": 6,
+        "fp": 100,
+        "fn": 48,
+        "precision": 0.05660377358490566,
+        "recall": 0.1111111111111111,
+        "f1": 0.075,
+        "scenario_exact_match_accuracy": 0.0,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9433962264150944,
+        "parse_success_rate": 1.0,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.0,
+        "citation_correctness": 1.0,
+        "traceability_completeness": 1.0,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 77849,
+        "output_tokens": 14669,
+        "latency_ms": {
+          "mean": 134886.83410500124,
+          "median": 119154.2685500026,
+          "p95": 208602.1294000093
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 3,
+            "fp": 15,
+            "fn": 9,
+            "precision": 0.16666666666666666,
+            "recall": 0.25,
+            "f1": 0.2
+          },
+          "AE-R002": {
+            "tp": 0,
+            "fp": 11,
+            "fn": 10,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 7,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 41,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 3,
+            "fp": 26,
+            "fn": 6,
+            "precision": 0.10344827586206896,
+            "recall": 0.3333333333333333,
+            "f1": 0.15789473684210528
+          }
+        }
+      },
+      "retrieval_grounded": {
+        "scenario_count": 40,
+        "tp": 6,
+        "fp": 83,
+        "fn": 48,
+        "precision": 0.06741573033707865,
+        "recall": 0.1111111111111111,
+        "f1": 0.0839160839160839,
+        "scenario_exact_match_accuracy": 0.05,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9325842696629213,
+        "parse_success_rate": 0.9,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.1,
+        "citation_correctness": 0.0,
+        "traceability_completeness": 0.9101123595505618,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 76765,
+        "output_tokens": 16515,
+        "latency_ms": {
+          "mean": 130064.94595750081,
+          "median": 110056.42700000317,
+          "p95": 287274.18969999417
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 0,
+            "fp": 12,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R002": {
+            "tp": 1,
+            "fp": 21,
+            "fn": 9,
+            "precision": 0.045454545454545456,
+            "recall": 0.1,
+            "f1": 0.06250000000000001
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 8,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 32,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 5,
+            "fp": 10,
+            "fn": 4,
+            "precision": 0.3333333333333333,
+            "recall": 0.5555555555555556,
+            "f1": 0.4166666666666667
+          }
+        }
+      },
+      "hybrid_explainer": {
+        "scenario_count": 40,
+        "tp": 46,
+        "fp": 33,
+        "fn": 8,
+        "precision": 0.5822784810126582,
+        "recall": 0.8518518518518519,
+        "f1": 0.6917293233082706,
+        "scenario_exact_match_accuracy": 0.55,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.4177215189873418,
+        "parse_success_rate": 0.975,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.025,
+        "citation_correctness": 0.8734177215189873,
+        "traceability_completeness": 1.0,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 79746,
+        "output_tokens": 12467,
+        "latency_ms": {
+          "mean": 299070.26024000114,
+          "median": 98672.0759000018,
+          "p95": 259159.26279997802
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 9,
+            "fp": 5,
+            "fn": 3,
+            "precision": 0.6428571428571429,
+            "recall": 0.75,
+            "f1": 0.6923076923076924
+          },
+          "AE-R002": {
+            "tp": 10,
+            "fp": 11,
+            "fn": 0,
+            "precision": 0.47619047619047616,
+            "recall": 1.0,
+            "f1": 0.6451612903225806
+          },
+          "AE-R003": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "AE-R004": {
+            "tp": 7,
+            "fp": 13,
+            "fn": 5,
+            "precision": 0.35,
+            "recall": 0.5833333333333334,
+            "f1": 0.4375
+          },
+          "AE-R005": {
+            "tp": 9,
+            "fp": 4,
+            "fn": 0,
+            "precision": 0.6923076923076923,
+            "recall": 1.0,
+            "f1": 0.8181818181818181
+          }
+        }
+      }
+    },
+    "llama3.1:8b": {
+      "llm_only": {
+        "scenario_count": 40,
+        "tp": 10,
+        "fp": 107,
+        "fn": 44,
+        "precision": 0.08547008547008547,
+        "recall": 0.18518518518518517,
+        "f1": 0.1169590643274854,
+        "scenario_exact_match_accuracy": 0.0,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9145299145299145,
+        "parse_success_rate": 0.95,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.05,
+        "citation_correctness": 1.0,
+        "traceability_completeness": 0.9658119658119658,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 71165,
+        "output_tokens": 20103,
+        "latency_ms": {
+          "mean": 146266.88723500192,
+          "median": 127214.1924000025,
+          "p95": 262759.4382999814
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 3,
+            "fp": 6,
+            "fn": 9,
+            "precision": 0.3333333333333333,
+            "recall": 0.25,
+            "f1": 0.28571428571428575
+          },
+          "AE-R002": {
+            "tp": 3,
+            "fp": 26,
+            "fn": 7,
+            "precision": 0.10344827586206896,
+            "recall": 0.3,
+            "f1": 0.15384615384615385
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 23,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 32,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 4,
+            "fp": 20,
+            "fn": 5,
+            "precision": 0.16666666666666666,
+            "recall": 0.4444444444444444,
+            "f1": 0.24242424242424243
+          }
+        }
+      },
+      "retrieval_grounded": {
+        "scenario_count": 40,
+        "tp": 12,
+        "fp": 144,
+        "fn": 42,
+        "precision": 0.07692307692307693,
+        "recall": 0.2222222222222222,
+        "f1": 0.1142857142857143,
+        "scenario_exact_match_accuracy": 0.0,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9230769230769231,
+        "parse_success_rate": 0.975,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.025,
+        "citation_correctness": 0.0,
+        "traceability_completeness": 0.9807692307692307,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 70181,
+        "output_tokens": 21448,
+        "latency_ms": {
+          "mean": 147929.24608750473,
+          "median": 145470.68570001284,
+          "p95": 196153.90560001833
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 3,
+            "fp": 24,
+            "fn": 9,
+            "precision": 0.1111111111111111,
+            "recall": 0.25,
+            "f1": 0.15384615384615383
+          },
+          "AE-R002": {
+            "tp": 5,
+            "fp": 30,
+            "fn": 5,
+            "precision": 0.14285714285714285,
+            "recall": 0.5,
+            "f1": 0.22222222222222224
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 32,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 38,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 4,
+            "fp": 20,
+            "fn": 5,
+            "precision": 0.16666666666666666,
+            "recall": 0.4444444444444444,
+            "f1": 0.24242424242424243
+          }
+        }
+      },
+      "hybrid_explainer": {
+        "scenario_count": 40,
+        "tp": 47,
+        "fp": 67,
+        "fn": 7,
+        "precision": 0.41228070175438597,
+        "recall": 0.8703703703703703,
+        "f1": 0.5595238095238095,
+        "scenario_exact_match_accuracy": 0.425,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.5877192982456141,
+        "parse_success_rate": 0.925,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.075,
+        "citation_correctness": 0.7807017543859649,
+        "traceability_completeness": 1.0,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 72821,
+        "output_tokens": 20538,
+        "latency_ms": {
+          "mean": 147994.1065474959,
+          "median": 140674.11464999896,
+          "p95": 270042.8248999815
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 7,
+            "fp": 20,
+            "fn": 5,
+            "precision": 0.25925925925925924,
+            "recall": 0.5833333333333334,
+            "f1": 0.358974358974359
+          },
+          "AE-R002": {
+            "tp": 8,
+            "fp": 14,
+            "fn": 2,
+            "precision": 0.36363636363636365,
+            "recall": 0.8,
+            "f1": 0.5000000000000001
+          },
+          "AE-R003": {
+            "tp": 11,
+            "fp": 5,
+            "fn": 0,
+            "precision": 0.6875,
+            "recall": 1.0,
+            "f1": 0.8148148148148148
+          },
+          "AE-R004": {
+            "tp": 12,
+            "fp": 11,
+            "fn": 0,
+            "precision": 0.5217391304347826,
+            "recall": 1.0,
+            "f1": 0.6857142857142856
+          },
+          "AE-R005": {
+            "tp": 9,
+            "fp": 17,
+            "fn": 0,
+            "precision": 0.34615384615384615,
+            "recall": 1.0,
+            "f1": 0.5142857142857142
+          }
+        }
+      }
+    },
+    "mistral:7b": {
+      "llm_only": {
+        "scenario_count": 40,
+        "tp": 3,
+        "fp": 64,
+        "fn": 51,
+        "precision": 0.04477611940298507,
+        "recall": 0.05555555555555555,
+        "f1": 0.04958677685950413,
+        "scenario_exact_match_accuracy": 0.0,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9552238805970149,
+        "parse_success_rate": 0.525,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.475,
+        "citation_correctness": 1.0,
+        "traceability_completeness": 0.9701492537313433,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 94899,
+        "output_tokens": 36815,
+        "latency_ms": {
+          "mean": 251698.4639200018,
+          "median": 282320.15554999816,
+          "p95": 325033.10160001274
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 0,
+            "fp": 3,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R002": {
+            "tp": 0,
+            "fp": 15,
+            "fn": 10,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 10,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 8,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 3,
+            "fp": 28,
+            "fn": 6,
+            "precision": 0.0967741935483871,
+            "recall": 0.3333333333333333,
+            "f1": 0.15000000000000002
+          }
+        }
+      },
+      "retrieval_grounded": {
+        "scenario_count": 40,
+        "tp": 6,
+        "fp": 86,
+        "fn": 48,
+        "precision": 0.06521739130434782,
+        "recall": 0.1111111111111111,
+        "f1": 0.08219178082191779,
+        "scenario_exact_match_accuracy": 0.05,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9347826086956522,
+        "parse_success_rate": 0.725,
+        "invalid_finding_rate": 0.010869565217391304,
+        "abstention_rate": 0.275,
+        "citation_correctness": 0.0,
+        "traceability_completeness": 0.989010989010989,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 93869,
+        "output_tokens": 30626,
+        "latency_ms": {
+          "mean": 300466.6778374994,
+          "median": 214006.28790000337,
+          "p95": 317970.5324000097
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 0,
+            "fp": 15,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R002": {
+            "tp": 3,
+            "fp": 17,
+            "fn": 7,
+            "precision": 0.15,
+            "recall": 0.3,
+            "f1": 0.2
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 18,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 23,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 3,
+            "fp": 12,
+            "fn": 6,
+            "precision": 0.2,
+            "recall": 0.3333333333333333,
+            "f1": 0.25
+          }
+        }
+      },
+      "hybrid_explainer": {
+        "scenario_count": 40,
+        "tp": 41,
+        "fp": 32,
+        "fn": 13,
+        "precision": 0.5616438356164384,
+        "recall": 0.7592592592592593,
+        "f1": 0.6456692913385828,
+        "scenario_exact_match_accuracy": 0.575,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.4383561643835616,
+        "parse_success_rate": 0.95,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.05,
+        "citation_correctness": 0.8082191780821918,
+        "traceability_completeness": 1.0,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 97621,
+        "output_tokens": 16886,
+        "latency_ms": {
+          "mean": 149489.19790500295,
+          "median": 118722.35099998943,
+          "p95": 294513.23969999794
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 1,
+            "fp": 19,
+            "fn": 11,
+            "precision": 0.05,
+            "recall": 0.08333333333333333,
+            "f1": 0.0625
+          },
+          "AE-R002": {
+            "tp": 9,
+            "fp": 4,
+            "fn": 1,
+            "precision": 0.6923076923076923,
+            "recall": 0.9,
+            "f1": 0.7826086956521738
+          },
+          "AE-R003": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "AE-R004": {
+            "tp": 12,
+            "fp": 4,
+            "fn": 0,
+            "precision": 0.75,
+            "recall": 1.0,
+            "f1": 0.8571428571428571
+          },
+          "AE-R005": {
+            "tp": 8,
+            "fp": 5,
+            "fn": 1,
+            "precision": 0.6153846153846154,
+            "recall": 0.8888888888888888,
+            "f1": 0.7272727272727274
+          }
+        }
+      }
+    }
+  },
+  "interpretation": "Controlled synthetic execution study; not certification or proprietary-data evidence."
+}

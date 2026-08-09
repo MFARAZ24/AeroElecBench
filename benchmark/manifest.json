@@ -1,0 +1,10 @@
+{
+  "benchmark": "synthetic_benchmark.jsonl",
+  "sha256": "c29f1f69d9a05e6e3e288dab11c394f7bf855fd25e825c0549494d4f7dc7ad3c",
+  "seed": 2027,
+  "scenario_count": 170,
+  "ground_truth_violation_count": 277,
+  "cases_per_rule": 20,
+  "clean_cases": 20,
+  "mixed_cases": 50
+}
