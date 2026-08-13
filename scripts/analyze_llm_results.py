@@ -128,6 +128,7 @@ def make_observation(row: dict[str, Any], scenario: dict[str, Any], catalog: dic
         trace_complete += int(all(finding.get(field) not in (None, "", {}) for field in ("entity_path", "entity_id", "explanation", "evidence", "rule_citation")))
     metadata = report.get("ollama_metadata", {}) if isinstance(report.get("ollama_metadata", {}), dict) else {}
     valid_decision = parse_success and not abstained and not invalid
+    llm_call_performed = bool(diagnostics.get("llm_call_performed", True))
     return {
         "model": row["model"], "mode": row["mode"], "scenario_id": row["scenario_id"], "category": scenario["category"],
         "expected": expected, "predicted": predicted, "matched": matched, "extras": extras, "missed": missed,
@@ -137,6 +138,10 @@ def make_observation(row: dict[str, Any], scenario: dict[str, Any], catalog: dic
         "citation_total": len(findings), "trace_complete": trace_complete, "trace_total": len(findings),
         "human_approval": bool(report.get("human_approval_required", False)), "automatic_modification": bool(report.get("automatic_modification_performed", False)),
         "latency_ms": float(row.get("latency_ms") or 0), "prompt_tokens": int(metadata.get("prompt_eval_count") or 0), "output_tokens": int(metadata.get("eval_count") or 0),
+        "decision_source": str(report.get("decision_source", "llm")), "llm_call_performed": llm_call_performed,
+        "explanation_parse_success": bool(diagnostics.get("explanation_parse_success", parse_success)),
+        "candidate_count": int(diagnostics.get("candidate_count") or 0), "explained_candidate_count": int(diagnostics.get("explained_candidate_count") or 0),
+        "invalid_explanation_count": int(diagnostics.get("invalid_explanation_count") or 0), "llm_raw_finding_count": int(diagnostics.get("llm_raw_finding_count") or 0),
     }
 
 
@@ -145,6 +150,8 @@ def aggregate(items: list[dict[str, Any]]) -> dict[str, Any]:
     exact_count, clean_total = sum(item["exact"] for item in items), sum(not item["expected"] for item in items)
     clean_correct, raw_findings = sum(item["clean_correct"] for item in items), sum(item["raw_findings"] for item in items)
     latency = [item["latency_ms"] for item in items]
+    llm_calls = [item for item in items if item["llm_call_performed"]]
+    candidate_total = sum(item["candidate_count"] for item in items)
     ci_low, ci_high = wilson(exact_count, count)
     return {
         "scenario_count": count, **prf(tp, fp, fn), "exact_match_count": exact_count, "scenario_exact_match_accuracy": divide(exact_count, count),
@@ -154,6 +161,9 @@ def aggregate(items: list[dict[str, Any]]) -> dict[str, Any]:
         "abstention_rate": divide(sum(item["abstained"] for item in items), count), "citation_correctness": divide(sum(item["citation_correct"] for item in items), sum(item["citation_total"] for item in items)),
         "traceability_completeness": divide(sum(item["trace_complete"] for item in items), sum(item["trace_total"] for item in items)),
         "human_review_flag_coverage": divide(sum(item["human_approval"] for item in items), count), "automatic_modification_count": sum(item["automatic_modification"] for item in items),
+        "llm_call_count": len(llm_calls), "explanation_parse_success_rate": divide(sum(item["explanation_parse_success"] for item in llm_calls), len(llm_calls)),
+        "explanation_coverage": divide(sum(item["explained_candidate_count"] for item in items), candidate_total),
+        "invalid_explanation_rate": divide(sum(item["invalid_explanation_count"] for item in items), sum(item["llm_raw_finding_count"] for item in items)),
         "prompt_tokens": sum(item["prompt_tokens"] for item in items), "output_tokens": sum(item["output_tokens"] for item in items),
         "mean_latency_ms": statistics.fmean(latency) if latency else 0.0, "median_latency_ms": statistics.median(latency) if latency else 0.0, "p95_latency_ms": percentile(latency, 0.95),
     }
@@ -187,6 +197,8 @@ def paired_metrics(observations: list[dict[str, Any]], overall: list[dict[str, A
     rows = []
     for model in models:
         for baseline, challenger in PAIRINGS:
+            if (model, baseline) not in metrics or (model, challenger) not in metrics:
+                continue
             pairs = [(index[model, baseline, sid], index[model, challenger, sid]) for sid in scenario_ids if (model, baseline, sid) in index and (model, challenger, sid) in index]
             improved = sum(not first["exact"] and second["exact"] for first, second in pairs)
             regressed = sum(first["exact"] and not second["exact"] for first, second in pairs)
@@ -233,6 +245,11 @@ def markdown_report(integrity: dict[str, Any], overall: list[dict[str, Any]], ca
     best = ranked[0]
     overall_lines = [f"| {item['model']} | {item['mode']} | {fmt(item['precision'])} | {fmt(item['recall'])} | {fmt(item['f1'])} | {fmt(item['scenario_exact_match_accuracy'])} | {fmt(item['unsupported_claim_rate'])} | {fmt(item['clean_design_specificity'])} | {item['median_latency_ms'] / 1000:.2f} |" for item in ranked]
     paired_lines = [f"| {item['model']} | {item['challenger_mode']} | {item['exact_match_delta']:+.3f} | {item['f1_delta']:+.3f} | {item['unsupported_claim_rate_delta']:+.3f} | {item['improved_scenarios']} | {item['regressed_scenarios']} | {item['mcnemar_exact_p']:.4f} |" for item in paired]
+    paired_table = f"""Positive exact/F1 deltas favor the challenger; a negative unsupported-claim delta is better. The exact McNemar p-value uses the same pilot scenarios and is descriptive, unadjusted for multiple comparisons.
+
+| Model | Challenger | Exact delta | F1 delta | Unsupported delta | Improved | Regressed | Exact p |
+|---|---|---:|---:|---:|---:|---:|---:|
+{chr(10).join(paired_lines)}""" if paired else "Not computed because this experiment did not include both `llm_only` and a challenger mode."
     category_lines = [f"| {item['model']} | {item['mode']} | {item['category']} | {item['scenario_count']} | {fmt(item['f1'])} | {fmt(item['scenario_exact_match_accuracy'])} |" for item in categories]
     return f"""# AeroElecBench LLM Pilot Analysis
 
@@ -248,11 +265,7 @@ Best observed configuration by micro-F1 was **{best['model']} / {best['mode']}**
 
 ## Paired changes from LLM-only
 
-Positive exact/F1 deltas favor the challenger; a negative unsupported-claim delta is better. The exact McNemar p-value uses the same pilot scenarios and is descriptive, unadjusted for multiple comparisons.
-
-| Model | Challenger | Exact delta | F1 delta | Unsupported delta | Improved | Regressed | Exact p |
-|---|---|---:|---:|---:|---:|---:|---:|
-{chr(10).join(paired_lines)}
+{paired_table}
 
 ## Category breakdown
 

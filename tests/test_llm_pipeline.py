@@ -16,11 +16,13 @@ from aeroecad.ollama import OllamaResponse
 class FakeOllamaClient:
     def __init__(self, payload: dict | str = "http://localhost:11434", timeout: float = 300.0):
         self.payload = payload if isinstance(payload, dict) else {"findings": [], "abstained": False, "abstention_reason": ""}
+        self.call_count = 0
 
     def ensure_models(self, requested: list[str]) -> list[str]:
         return requested
 
     def chat(self, model: str, system: str, user: str, seed: int = 2027, max_tokens: int = 1200) -> OllamaResponse:
+        self.call_count += 1
         return OllamaResponse(json.dumps(self.payload), {"prompt_eval_count": 10, "eval_count": 5})
 
 
@@ -56,6 +58,35 @@ class LLMPipelineTests(unittest.TestCase):
         self.assertTrue(report["diagnostics"]["parse_success"])
         self.assertTrue(report["human_approval_required"])
         self.assertFalse(report["automatic_modification_performed"])
+
+    def test_clean_hybrid_result_skips_llm_and_stays_clean(self) -> None:
+        scenario = next(item for item in self.scenarios if item["category"] == "clean")
+        client = FakeOllamaClient({"findings": [{"rule_id": "AE-R001", "entity_path": "components[0].part_number"}]})
+        report = LLMReviewAgent(self.catalog, client).review(scenario["design"], scenario["review_query"], "qwen2.5:7b", "hybrid_explainer")
+        self.assertEqual(report["findings"], [])
+        self.assertEqual(client.call_count, 0)
+        self.assertFalse(report["diagnostics"]["llm_call_performed"])
+
+    def test_hybrid_preserves_deterministic_finding_identity(self) -> None:
+        scenario = next(item for item in self.scenarios if item["category"] == "single_fault" and item["ground_truth"][0]["rule_id"] == "AE-R003")
+        payload = {"findings": [{"rule_id": "AE-R001", "entity_path": "components[0].part_number", "explanation": "unsupported"}], "abstained": False, "abstention_reason": ""}
+        report = LLMReviewAgent(self.catalog, FakeOllamaClient(payload)).review(scenario["design"], scenario["review_query"], "qwen2.5:7b", "hybrid_explainer")
+        expected = {(item["rule_id"], item["entity_path"]) for item in scenario["ground_truth"]}
+        actual = {(item["rule_id"], item["entity_path"]) for item in report["findings"]}
+        self.assertEqual(actual, expected)
+        self.assertEqual(report["diagnostics"]["invalid_explanation_count"], 1)
+        self.assertEqual(report["decision_source"], "deterministic_validator")
+
+    def test_hybrid_smoke_decisions_are_exact_under_adversarial_llm_output(self) -> None:
+        payload = {"findings": [{"rule_id": "AE-R001", "entity_path": "components[99].part_number", "explanation": "unsupported"}], "abstained": False, "abstention_reason": ""}
+        client = FakeOllamaClient(payload)
+        agent = LLMReviewAgent(self.catalog, client)
+        for scenario in select_scenarios(self.scenarios, "smoke"):
+            report = agent.review(scenario["design"], scenario["review_query"], "qwen2.5:7b", "hybrid_explainer")
+            expected = {(item["rule_id"], item["entity_path"]) for item in scenario["ground_truth"]}
+            actual = {(item["rule_id"], item["entity_path"]) for item in report["findings"]}
+            self.assertEqual(actual, expected)
+        self.assertEqual(client.call_count, 6)
 
     def test_offline_experiment_writes_resumable_result_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch("aeroecad.llm_evaluation.OllamaClient", FakeOllamaClient):

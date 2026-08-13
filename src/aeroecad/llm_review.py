@@ -105,19 +105,60 @@ class LLMReviewAgent:
             relevant_ids = {item["rule_id"] for item in deterministic}
             relevant = [rule for rule in self.rules if rule["rule_id"] in relevant_ids] or selected
             sections["rule_criteria"] = _grounding_rules(relevant)
-            sections["instruction"] = "Check the deterministic candidates against the design, retain only supported candidates, and add a concise explanation."
+            sections["instruction"] = "The deterministic candidates are fixed findings. Return exactly one explanation for each candidate using its unchanged rule_id and entity_path. Do not add, remove, relocate, or relabel findings."
         sections["design"] = design
         return json.dumps(sections, separators=(",", ":"), ensure_ascii=False), [rule["rule_id"] for rule in selected]
 
     def review(self, design: dict[str, Any], query: str, model: str, mode: str, seed: int = 2027, max_tokens: int = 1200) -> dict[str, Any]:
         if mode not in LLM_MODES:
             raise ValueError(f"mode must be one of: {', '.join(LLM_MODES)}")
+        deterministic = validate_design(design, self.rules) if mode == "hybrid_explainer" else []
+        if mode == "hybrid_explainer" and not deterministic:
+            return {
+                "model": model, "mode": mode, "selected_rule_ids": [], "prompt_sha256": "", "findings": [], "abstained": False, "abstention_reason": "",
+                "diagnostics": {
+                    "parse_success": True, "raw_finding_count": 0, "invalid_finding_count": 0, "error": "", "llm_call_performed": False,
+                    "explanation_parse_success": True, "llm_raw_finding_count": 0, "invalid_explanation_count": 0, "explained_candidate_count": 0,
+                    "candidate_count": 0, "explanation_coverage": 1.0,
+                },
+                "ollama_metadata": {}, "raw_content": "", "decision_source": "deterministic_validator", "explanation_source": "not_required",
+                "human_approval_required": True, "automatic_modification_performed": False,
+            }
         prompt, selected_rule_ids = self._prompt(design, query, mode)
         response = self.client.chat(model, SYSTEM_PROMPT, prompt, seed=seed, max_tokens=max_tokens)
         parsed, diagnostics = parse_llm_content(response.content, set(self.rule_index))
+        if mode == "hybrid_explainer":
+            candidates = {(item["rule_id"], item["entity_path"]): item for item in deterministic}
+            explanations, rejected = {}, diagnostics["invalid_finding_count"]
+            for item in parsed["findings"]:
+                key = item["rule_id"], item["entity_path"]
+                if key not in candidates or key in explanations:
+                    rejected += 1
+                else:
+                    explanations[key] = item
+            findings = []
+            for key, candidate in candidates.items():
+                finding, explanation = dict(candidate), explanations.get(key, {}).get("explanation", "").strip()
+                finding["explanation"] = explanation or candidate["message"]
+                findings.append(finding)
+            explanation_parse_success = diagnostics["parse_success"] and not parsed["abstained"]
+            diagnostics = {
+                "parse_success": True, "raw_finding_count": len(findings), "invalid_finding_count": 0, "error": "", "llm_call_performed": True,
+                "explanation_parse_success": explanation_parse_success, "llm_raw_finding_count": diagnostics["raw_finding_count"],
+                "invalid_explanation_count": rejected, "explained_candidate_count": len(explanations), "candidate_count": len(findings),
+                "explanation_coverage": len(explanations) / len(findings),
+            }
+            return {
+                "model": model, "mode": mode, "selected_rule_ids": sorted({item["rule_id"] for item in deterministic}),
+                "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(), "findings": findings, "abstained": False, "abstention_reason": "",
+                "diagnostics": diagnostics, "ollama_metadata": response.metadata, "raw_content": response.content,
+                "decision_source": "deterministic_validator", "explanation_source": "llm_with_deterministic_fallback",
+                "human_approval_required": True, "automatic_modification_performed": False,
+            }
         return {
             "model": model, "mode": mode, "selected_rule_ids": selected_rule_ids, "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
             "findings": parsed["findings"], "abstained": parsed["abstained"], "abstention_reason": parsed["abstention_reason"],
             "diagnostics": diagnostics, "ollama_metadata": response.metadata, "raw_content": response.content,
+            "decision_source": "llm", "explanation_source": "llm",
             "human_approval_required": True, "automatic_modification_performed": False,
         }
