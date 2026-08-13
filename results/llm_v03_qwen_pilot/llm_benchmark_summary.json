@@ -1,0 +1,78 @@
+{
+  "prototype": "AeroECAD-Agent",
+  "version": "0.2.0",
+  "profile": "pilot",
+  "scenario_count": 40,
+  "models": {
+    "qwen2.5:7b": {
+      "hybrid_explainer": {
+        "scenario_count": 40,
+        "tp": 54,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "scenario_exact_match_accuracy": 1.0,
+        "clean_design_specificity": 1.0,
+        "unsupported_claim_rate": 0.0,
+        "parse_success_rate": 1.0,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.0,
+        "citation_correctness": 1.0,
+        "traceability_completeness": 1.0,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 70798,
+        "output_tokens": 10539,
+        "latency_ms": {
+          "mean": 88421.11270499809,
+          "median": 87759.5987500099,
+          "p95": 160110.52359998575
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 12,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "AE-R002": {
+            "tp": 10,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "AE-R003": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "AE-R004": {
+            "tp": 12,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "AE-R005": {
+            "tp": 9,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          }
+        }
+      }
+    }
+  },
+  "interpretation": "Controlled synthetic execution study; not certification or proprietary-data evidence."
+}

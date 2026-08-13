@@ -1,0 +1,2 @@
+model,mode,scenario_count,precision,recall,f1,scenario_exact_match_accuracy,clean_design_specificity,unsupported_claim_rate,parse_success_rate,abstention_rate,citation_correctness,traceability_completeness,median_latency_ms
+qwen2.5:7b,hybrid_explainer,40,1.0,1.0,1.0,1.0,1.0,0.0,1.0,0.0,1.0,1.0,87759.5987500099

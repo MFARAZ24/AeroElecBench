@@ -1,0 +1,6 @@
+model,mode,rule_id,support,tp,fp,fn,precision,recall,f1
+qwen2.5:7b,hybrid_explainer,AE-R001,12,12,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R002,10,10,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R003,11,11,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R004,12,12,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R005,9,9,0,0,1.0,1.0,1.0

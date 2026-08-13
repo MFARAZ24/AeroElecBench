@@ -1,0 +1,117 @@
+{
+  "report_id": "REPORT-SYN-ECAD-0120",
+  "design_id": "SYN-ECAD-0120",
+  "generated_at": "2026-08-10T01:43:08.787851+00:00",
+  "mode": "retrieval_guided",
+  "query": "Perform a complete electrical-design compliance review.",
+  "status": "REVIEW_REQUIRED",
+  "summary": {
+    "finding_count": 4,
+    "critical": 3,
+    "major": 1
+  },
+  "selected_rule_ids": [
+    "AE-R001",
+    "AE-R002",
+    "AE-R003",
+    "AE-R004",
+    "AE-R005"
+  ],
+  "retrieval_ranking": [
+    {
+      "rule_id": "AE-R004",
+      "score": 0.21260669538103305
+    },
+    {
+      "rule_id": "AE-R002",
+      "score": 0.15399694059386784
+    },
+    {
+      "rule_id": "AE-R005",
+      "score": 0.12656727615365804
+    },
+    {
+      "rule_id": "AE-R003",
+      "score": 0.06583062719994216
+    },
+    {
+      "rule_id": "AE-R001",
+      "score": 0.0
+    }
+  ],
+  "findings": [
+    {
+      "rule_id": "AE-R002",
+      "severity": "critical",
+      "entity_path": "components[1].id",
+      "entity_id": "LRU-0120-00",
+      "message": "Component identifier 'LRU-0120-00' duplicates an earlier occurrence.",
+      "evidence": {
+        "observed": {
+          "value": "LRU-0120-00",
+          "first_path": "components[0].id"
+        },
+        "expected": "unique identifier"
+      },
+      "rule_citation": {
+        "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+        "section": "3.2",
+        "rule_id": "AE-R002"
+      }
+    },
+    {
+      "rule_id": "AE-R003",
+      "severity": "critical",
+      "entity_path": "wires[0].target.pin_id",
+      "entity_id": "W-0120-00",
+      "message": "Wire endpoint references an undeclared connector pin.",
+      "evidence": {
+        "observed": "UNDECLARED_PIN",
+        "expected": "declared pin on LRU-0120-00"
+      },
+      "rule_citation": {
+        "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+        "section": "4.1",
+        "rule_id": "AE-R003"
+      }
+    },
+    {
+      "rule_id": "AE-R004",
+      "severity": "critical",
+      "entity_path": "wires[1]",
+      "entity_id": "W-0120-01",
+      "message": "Connected pins use incompatible signal classes.",
+      "evidence": {
+        "observed": {
+          "source": "GROUND",
+          "target": "POWER_28V"
+        },
+        "expected": "identical endpoint signal classes"
+      },
+      "rule_citation": {
+        "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+        "section": "4.2",
+        "rule_id": "AE-R004"
+      }
+    },
+    {
+      "rule_id": "AE-R005",
+      "severity": "major",
+      "entity_path": "wires[2].requirement_ids",
+      "entity_id": "W-0120-02",
+      "message": "Wire has no requirement trace.",
+      "evidence": {
+        "observed": [],
+        "expected": "one or more declared requirement identifiers"
+      },
+      "rule_citation": {
+        "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+        "section": "5.1",
+        "rule_id": "AE-R005"
+      }
+    }
+  ],
+  "human_approval_required": true,
+  "automatic_modification_performed": false,
+  "scope_notice": "Result applies only to the fictional encoded rule catalog and requires engineer review."
+}

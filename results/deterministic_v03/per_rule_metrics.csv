@@ -1,0 +1,11 @@
+mode,rule_id,tp,fp,fn,precision,recall,f1
+full,AE-R001,56,0,0,1.0,1.0,1.0
+full,AE-R002,57,0,0,1.0,1.0,1.0
+full,AE-R003,51,0,0,1.0,1.0,1.0
+full,AE-R004,57,0,0,1.0,1.0,1.0
+full,AE-R005,56,0,0,1.0,1.0,1.0
+retrieval_guided,AE-R001,56,0,0,1.0,1.0,1.0
+retrieval_guided,AE-R002,57,0,0,1.0,1.0,1.0
+retrieval_guided,AE-R003,51,0,0,1.0,1.0,1.0
+retrieval_guided,AE-R004,57,0,0,1.0,1.0,1.0
+retrieval_guided,AE-R005,56,0,0,1.0,1.0,1.0

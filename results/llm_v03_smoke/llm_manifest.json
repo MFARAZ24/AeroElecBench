@@ -1,0 +1,25 @@
+{
+  "seed": 2027,
+  "profile": "smoke",
+  "scenario_ids": [
+    "clean-000",
+    "single-ae-r001-000",
+    "single-ae-r002-000",
+    "single-ae-r003-000",
+    "single-ae-r004-000",
+    "single-ae-r005-000",
+    "mixed-000"
+  ],
+  "models": [
+    "qwen2.5:7b",
+    "llama3.1:8b",
+    "mistral:7b"
+  ],
+  "modes": [
+    "hybrid_explainer"
+  ],
+  "temperature": 0,
+  "max_tokens": 1200,
+  "base_url": "http://localhost:11434",
+  "benchmark_sha256": "c29f1f69d9a05e6e3e288dab11c394f7bf855fd25e825c0549494d4f7dc7ad3c"
+}

@@ -1,0 +1,16 @@
+model,mode,rule_id,support,tp,fp,fn,precision,recall,f1
+llama3.1:8b,hybrid_explainer,AE-R001,1,1,0,0,1.0,1.0,1.0
+llama3.1:8b,hybrid_explainer,AE-R002,2,2,0,0,1.0,1.0,1.0
+llama3.1:8b,hybrid_explainer,AE-R003,2,2,0,0,1.0,1.0,1.0
+llama3.1:8b,hybrid_explainer,AE-R004,2,2,0,0,1.0,1.0,1.0
+llama3.1:8b,hybrid_explainer,AE-R005,2,2,0,0,1.0,1.0,1.0
+mistral:7b,hybrid_explainer,AE-R001,1,1,0,0,1.0,1.0,1.0
+mistral:7b,hybrid_explainer,AE-R002,2,2,0,0,1.0,1.0,1.0
+mistral:7b,hybrid_explainer,AE-R003,2,2,0,0,1.0,1.0,1.0
+mistral:7b,hybrid_explainer,AE-R004,2,2,0,0,1.0,1.0,1.0
+mistral:7b,hybrid_explainer,AE-R005,2,2,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R001,1,1,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R002,2,2,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R003,2,2,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R004,2,2,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R005,2,2,0,0,1.0,1.0,1.0
