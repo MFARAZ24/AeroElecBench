@@ -1,0 +1,16 @@
+model,mode,rule_id,support,tp,fp,fn,precision,recall,f1
+qwen2.5:7b,hybrid_explainer,AE-R001,12,12,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R002,10,10,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R003,11,11,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R004,12,12,0,0,1.0,1.0,1.0
+qwen2.5:7b,hybrid_explainer,AE-R005,9,9,0,0,1.0,1.0,1.0
+qwen2.5:7b,llm_only,AE-R001,12,3,15,9,0.16666666666666666,0.25,0.2
+qwen2.5:7b,llm_only,AE-R002,10,0,11,10,0.0,0.0,0.0
+qwen2.5:7b,llm_only,AE-R003,11,0,7,11,0.0,0.0,0.0
+qwen2.5:7b,llm_only,AE-R004,12,0,40,12,0.0,0.0,0.0
+qwen2.5:7b,llm_only,AE-R005,9,3,26,6,0.10344827586206896,0.3333333333333333,0.15789473684210528
+qwen2.5:7b,retrieval_grounded,AE-R001,12,0,12,12,0.0,0.0,0.0
+qwen2.5:7b,retrieval_grounded,AE-R002,10,1,21,9,0.045454545454545456,0.1,0.06250000000000001
+qwen2.5:7b,retrieval_grounded,AE-R003,11,0,8,11,0.0,0.0,0.0
+qwen2.5:7b,retrieval_grounded,AE-R004,12,0,32,12,0.0,0.0,0.0
+qwen2.5:7b,retrieval_grounded,AE-R005,9,5,10,4,0.3333333333333333,0.5555555555555556,0.4166666666666667
