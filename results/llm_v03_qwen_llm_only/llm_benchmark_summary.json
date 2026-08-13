@@ -1,0 +1,78 @@
+{
+  "prototype": "AeroECAD-Agent",
+  "version": "0.2.0",
+  "profile": "pilot",
+  "scenario_count": 40,
+  "models": {
+    "qwen2.5:7b": {
+      "llm_only": {
+        "scenario_count": 40,
+        "tp": 6,
+        "fp": 99,
+        "fn": 48,
+        "precision": 0.05714285714285714,
+        "recall": 0.1111111111111111,
+        "f1": 0.07547169811320754,
+        "scenario_exact_match_accuracy": 0.0,
+        "clean_design_specificity": 0.0,
+        "unsupported_claim_rate": 0.9428571428571428,
+        "parse_success_rate": 1.0,
+        "invalid_finding_rate": 0.0,
+        "abstention_rate": 0.0,
+        "citation_correctness": 1.0,
+        "traceability_completeness": 1.0,
+        "automatic_modification_count": 0,
+        "prompt_tokens": 77849,
+        "output_tokens": 14577,
+        "latency_ms": {
+          "mean": 115867.80701499809,
+          "median": 115268.20525000221,
+          "p95": 171620.7330999896
+        },
+        "per_rule": {
+          "AE-R001": {
+            "tp": 3,
+            "fp": 15,
+            "fn": 9,
+            "precision": 0.16666666666666666,
+            "recall": 0.25,
+            "f1": 0.2
+          },
+          "AE-R002": {
+            "tp": 0,
+            "fp": 11,
+            "fn": 10,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R003": {
+            "tp": 0,
+            "fp": 7,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R004": {
+            "tp": 0,
+            "fp": 40,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "AE-R005": {
+            "tp": 3,
+            "fp": 26,
+            "fn": 6,
+            "precision": 0.10344827586206896,
+            "recall": 0.3333333333333333,
+            "f1": 0.15789473684210528
+          }
+        }
+      }
+    }
+  },
+  "interpretation": "Controlled synthetic execution study; not certification or proprietary-data evidence."
+}
