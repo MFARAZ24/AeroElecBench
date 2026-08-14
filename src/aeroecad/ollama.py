@@ -66,9 +66,9 @@ class OllamaClient:
             raise OllamaError(f"Requested model(s) are not installed: {', '.join(missing)}. Available models: {', '.join(available) or 'none'}")
         return available
 
-    def chat(self, model: str, system: str, user: str, seed: int = 2027, max_tokens: int = 1200, keep_alive: str = "20m") -> OllamaResponse:
+    def chat(self, model: str, system: str, user: str, seed: int = 2027, max_tokens: int = 1200, keep_alive: str = "20m", response_schema: dict[str, Any] | None = None) -> OllamaResponse:
         payload = {
-            "model": model, "stream": False, "format": REVIEW_RESPONSE_SCHEMA, "keep_alive": keep_alive,
+            "model": model, "stream": False, "format": response_schema or REVIEW_RESPONSE_SCHEMA, "keep_alive": keep_alive,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "options": {"temperature": 0, "seed": seed, "num_predict": max_tokens},
         }

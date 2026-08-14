@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import copy
 import json
@@ -7,6 +7,13 @@ from pathlib import Path
 from typing import Any
 
 RULE_IDS = ("AE-R001", "AE-R002", "AE-R003", "AE-R004", "AE-R005")
+REPAIRABILITY_BY_RULE = {
+    "AE-R001": "intent_dependent",
+    "AE-R002": "ambiguous",
+    "AE-R003": "constrained",
+    "AE-R004": "ambiguous",
+    "AE-R005": "intent_dependent",
+}
 QUERY_TEMPLATES = {
     "AE-R001": (
         "Check whether every installed unit includes all mandatory metadata.",
@@ -79,32 +86,71 @@ def _ground_truth(rule_id: str, path: str, entity_id: str, defect: str) -> dict[
     return {"rule_id": rule_id, "entity_path": path, "entity_id": entity_id, "defect": defect}
 
 
-def _inject(design: dict[str, Any], rule_id: str) -> dict[str, str]:
+def _operation(op: str, path: str, value: Any) -> dict[str, Any]:
+    return {"op": op, "path": path, "value": copy.deepcopy(value)}
+
+
+def _repair_oracle(rule_id: str, operations: list[dict[str, Any]]) -> dict[str, Any]:
+    return {"rule_id": rule_id, "repairability": REPAIRABILITY_BY_RULE[rule_id], "operations": operations}
+
+
+def _scenario_oracle(expected_design: dict[str, Any], repairs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {"version": "0.1", "expected_design": copy.deepcopy(expected_design), "repairs": repairs}
+
+
+def _inject(design: dict[str, Any], rule_id: str) -> tuple[dict[str, str], dict[str, Any]]:
     if rule_id == "AE-R001":
         component = design["components"][0]
-        component.pop("part_number")
-        return _ground_truth(rule_id, "components[0].part_number", component["id"], "missing_required_attribute")
+        original = component.pop("part_number")
+        path = "components[0].part_number"
+        return (
+            _ground_truth(rule_id, path, component["id"], "missing_required_attribute"),
+            _repair_oracle(rule_id, [_operation("add", path, original)]),
+        )
+
     if rule_id == "AE-R002":
         components = design["components"]
-        previous_id = components[1]["id"]
-        components[1]["id"] = components[0]["id"]
-        for wire in design["wires"]:
+        previous_id, duplicate_id = components[1]["id"], components[0]["id"]
+        operations = [_operation("replace", "components[1].id", previous_id)]
+        components[1]["id"] = duplicate_id
+        for wire_index, wire in enumerate(design["wires"]):
             for endpoint_name in ("source", "target"):
                 if wire[endpoint_name]["component_id"] == previous_id:
-                    wire[endpoint_name]["component_id"] = components[1]["id"]
-        return _ground_truth(rule_id, "components[1].id", components[1]["id"], "duplicate_identifier")
+                    path = f"wires[{wire_index}].{endpoint_name}.component_id"
+                    operations.append(_operation("replace", path, previous_id))
+                    wire[endpoint_name]["component_id"] = duplicate_id
+        return (
+            _ground_truth(rule_id, "components[1].id", duplicate_id, "duplicate_identifier"),
+            _repair_oracle(rule_id, operations),
+        )
+
     if rule_id == "AE-R003":
         wire = design["wires"][0]
+        path, original = "wires[0].target.pin_id", wire["target"]["pin_id"]
         wire["target"]["pin_id"] = "UNDECLARED_PIN"
-        return _ground_truth(rule_id, "wires[0].target.pin_id", wire["id"], "invalid_pin_reference")
+        return (
+            _ground_truth(rule_id, path, wire["id"], "invalid_pin_reference"),
+            _repair_oracle(rule_id, [_operation("replace", path, original)]),
+        )
+
     if rule_id == "AE-R004":
         wire = design["wires"][1]
+        path, original = "wires[1].target.pin_id", wire["target"]["pin_id"]
         wire["target"]["pin_id"] = "PWR"
-        return _ground_truth(rule_id, "wires[1]", wire["id"], "incompatible_signal_classes")
+        return (
+            _ground_truth(rule_id, "wires[1]", wire["id"], "incompatible_signal_classes"),
+            _repair_oracle(rule_id, [_operation("replace", path, original)]),
+        )
+
     if rule_id == "AE-R005":
         wire = design["wires"][2]
+        path, original = "wires[2].requirement_ids", copy.deepcopy(wire["requirement_ids"])
         wire["requirement_ids"] = []
-        return _ground_truth(rule_id, "wires[2].requirement_ids", wire["id"], "missing_requirement_trace")
+        return (
+            _ground_truth(rule_id, path, wire["id"], "missing_requirement_trace"),
+            _repair_oracle(rule_id, [_operation("replace", path, original)]),
+        )
+
     raise ValueError(f"Unsupported synthetic defect rule: {rule_id}")
 
 
@@ -112,32 +158,45 @@ def generate_benchmark(seed: int = 2027, cases_per_rule: int = 20, clean_cases: 
     rng = random.Random(seed)
     scenarios: list[dict[str, Any]] = []
     design_index = 0
+
     for clean_index in range(clean_cases):
         design = _base_design(design_index, rng)
         scenarios.append({
-            "scenario_id": f"clean-{clean_index:03d}", "category": "clean", "review_query": "Perform a complete electrical-design compliance review.",
+            "scenario_id": f"clean-{clean_index:03d}", "category": "clean",
+            "review_query": "Perform a complete electrical-design compliance review.",
             "design": design, "ground_truth": [],
+            "repair_oracle": _scenario_oracle(design, []),
         })
         design_index += 1
+
     for rule_id in RULE_IDS:
         for case_index in range(cases_per_rule):
             design = _base_design(design_index, rng)
-            truth = _inject(design, rule_id)
+            expected_design = copy.deepcopy(design)
+            truth, repair = _inject(design, rule_id)
             templates = QUERY_TEMPLATES[rule_id]
             scenarios.append({
                 "scenario_id": f"single-{rule_id.lower()}-{case_index:03d}", "category": "single_fault",
-                "review_query": templates[case_index % len(templates)], "design": design, "ground_truth": [truth],
+                "review_query": templates[case_index % len(templates)], "design": design,
+                "ground_truth": [truth], "repair_oracle": _scenario_oracle(expected_design, [repair]),
             })
             design_index += 1
+
     for mixed_index in range(mixed_cases):
         design = _base_design(design_index, rng)
+        expected_design = copy.deepcopy(design)
         selected = rng.sample(RULE_IDS, rng.randint(2, len(RULE_IDS)))
-        truth = [_inject(design, rule_id) for rule_id in selected]
+        injected = [_inject(design, rule_id) for rule_id in selected]
+        truth = sorted((item[0] for item in injected), key=lambda item: item["rule_id"])
+        repairs = sorted((item[1] for item in injected), key=lambda item: item["rule_id"])
         scenarios.append({
-            "scenario_id": f"mixed-{mixed_index:03d}", "category": "mixed_fault", "review_query": "Perform a complete electrical-design compliance review.",
-            "design": design, "ground_truth": sorted(truth, key=lambda item: item["rule_id"]),
+            "scenario_id": f"mixed-{mixed_index:03d}", "category": "mixed_fault",
+            "review_query": "Perform a complete electrical-design compliance review.",
+            "design": design, "ground_truth": truth,
+            "repair_oracle": _scenario_oracle(expected_design, repairs),
         })
         design_index += 1
+
     return scenarios
 
 
