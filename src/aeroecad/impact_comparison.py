@@ -9,8 +9,9 @@ from .impact_agent import IMPACT_MODES, ImpactAgent
 from .impact_evaluation import DEFAULT_BENCHMARK, _load_frozen_development, evaluate_impact_records
 from .ollama import OllamaClient
 
-DEFAULT_COMPARISON_OUTPUT = Path("results/impact_v07_comparison")
-EVALUATION_ID = "AEROELECBENCH-IMPACT-COMPARISON-0.7"
+DEFAULT_COMPARISON_OUTPUT = Path("results/impact_v071_comparison")
+EVALUATION_ID = "AEROELECBENCH-IMPACT-COMPARISON-0.7.1"
+PIPELINE_VERSION = "0.7.1"
 
 
 def _select_scenarios(scenarios: list[dict[str, Any]], profile: str) -> list[dict[str, Any]]:
@@ -34,7 +35,7 @@ def _read_existing(path: Path, mode: str, model: str, benchmark_sha256: str, all
         raise ValueError(f"Duplicate scenario records in {path}")
     for row in rows:
         expected_model = None if mode == "graph_deterministic" else model
-        if row.get("mode") != mode or row.get("model") != expected_model or row.get("benchmark_sha256") != benchmark_sha256 or row.get("scenario_id") not in allowed_ids:
+        if row.get("pipeline_version") != PIPELINE_VERSION or row.get("mode") != mode or row.get("model") != expected_model or row.get("benchmark_sha256") != benchmark_sha256 or row.get("scenario_id") not in allowed_ids:
             raise ValueError(f"Existing record provenance mismatch in {path}")
     return {row["scenario_id"]: row for row in rows}
 
@@ -50,6 +51,8 @@ def _write_outputs(output: Path, aggregate: dict[str, Any], manifest: dict[str, 
     (output / "evaluation_metrics.json").write_text(json.dumps(aggregate, indent=2) + "\n", encoding="utf-8")
     fields = [
         "mode", "scenario_count", "report_scenario_count", "llm_call_count", "rejected_output_count",
+        "invalid_node_count", "duplicate_node_count", "invalid_edge_count", "valid_edge_count", "invalid_edge_rate",
+        "retrieval_node_recall",
         "impact_set_precision", "impact_set_recall", "impact_set_f1", "impact_exact_scenario_accuracy",
         "path_precision", "path_recall", "path_f1", "multi_hop_recall", "abstention_precision",
         "abstention_recall", "clean_case_specificity", "oracle_action_accuracy",
@@ -95,6 +98,7 @@ def run_impact_comparison(
                 continue
             record = agent.run(scenario, model, mode, seed, max_tokens, retrieval_top_k)
             record["benchmark_sha256"] = benchmark_manifest["benchmark_sha256"]
+            record["pipeline_version"] = PIPELINE_VERSION
             _append(record_path, record)
             existing[scenario["scenario_id"]] = record
         records = [existing[scenario["scenario_id"]] for scenario in selected]
@@ -109,9 +113,12 @@ def run_impact_comparison(
         "modes": list(modes), "profile": profile, "scenario_count": len(selected),
         "seed": seed, "temperature": 0, "max_tokens": max_tokens, "retrieval_top_k": retrieval_top_k,
         "oracle_exposed_to_model": False, "root_node_ids_exposed_to_model": False,
-        "metric_generation": "deterministic", "text_retrieval_method": "lexical_overlap_v01",
+        "pipeline_version": PIPELINE_VERSION, "metric_generation": "deterministic",
+        "text_retrieval_method": "paired_entity_iterative_lexical_link_expansion_v01",
         "model_output_contract": "affected_nodes_plus_evidence_edges", "path_reconstruction": "model_edges_only",
-        "agent_policy": "bounded_ordered_tool_plan_v01", "development_only": True, "heldout": False,
+        "agent_policy": "bounded_ordered_tool_plan_v01", "agent_model_role": "ordered_tool_plan_selection_only",
+        "agent_impact_result_source": "validated_deterministic_tool_execution",
+        "development_only": True, "heldout": False,
         "posthoc_tuning_allowed": True, "production_modifications_allowed": False, "narrative_output": False,
     }
     _write_outputs(output, aggregate, manifest)

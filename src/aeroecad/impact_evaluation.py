@@ -134,6 +134,12 @@ def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[
         counts["correct_action_count"] += int(correct_action)
         counts["llm_call_count"] += int(row.get("llm_call_count", 0))
         counts["rejected_output_count"] += int(report["status"] == "rejected")
+        diagnostics = row.get("diagnostics") or {}
+        counts["invalid_node_count"] += int(diagnostics.get("invalid_node_count", 0))
+        counts["duplicate_node_count"] += int(diagnostics.get("duplicate_node_count", 0))
+        counts["invalid_edge_count"] += int(diagnostics.get("invalid_edge_count", 0))
+        counts["valid_edge_count"] += int(diagnostics.get("valid_edge_count", 0))
+        counts["raw_edge_count"] += int(diagnostics.get("raw_edge_count", 0))
         counts["input_immutable_count"] += int(report["input_designs_unchanged"])
         counts["production_modification_count"] += int(report["production_modification_performed"])
         if expected_action == "report":
@@ -149,6 +155,11 @@ def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[
             predicted_targets = {item["target_id"] for item in report["impact_paths"]}
             counts["multi_hop_total"] += len(multi_hop_targets)
             counts["multi_hop_found"] += len(multi_hop_targets & predicted_targets)
+            if mode == "text_rag":
+                retrieved_nodes = set(row.get("retrieved_entity_ids", []))
+                expected_retrieval_nodes = {node.lower() for node in expected_nodes}
+                counts["retrieval_expected_node_count"] += len(expected_nodes)
+                counts["retrieval_found_node_count"] += len(expected_retrieval_nodes & retrieved_nodes)
         if expected_action == "abstain":
             counts["expected_abstention_count"] += 1
             counts["correct_abstention_count"] += int(predicted_action == "abstain")
@@ -174,6 +185,10 @@ def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[
         "mode": mode, "scenario_count": counts["scenario_count"],
         "report_scenario_count": counts["report_scenario_count"],
         "llm_call_count": counts["llm_call_count"], "rejected_output_count": counts["rejected_output_count"],
+        "invalid_node_count": counts["invalid_node_count"], "duplicate_node_count": counts["duplicate_node_count"],
+        "invalid_edge_count": counts["invalid_edge_count"], "valid_edge_count": counts["valid_edge_count"],
+        "invalid_edge_rate": counts["invalid_edge_count"] / counts["raw_edge_count"] if counts["raw_edge_count"] else 0.0,
+        "retrieval_node_recall": counts["retrieval_found_node_count"] / counts["retrieval_expected_node_count"] if mode == "text_rag" and counts["retrieval_expected_node_count"] else None,
         "impact_set_precision": precision, "impact_set_recall": recall,
         "impact_set_f1": 2 * precision * recall / (precision + recall) if precision + recall else 0.0,
         "impact_exact_scenario_accuracy": counts["exact_set_count"] / counts["report_scenario_count"] if counts["report_scenario_count"] else 0.0,

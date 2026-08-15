@@ -50,14 +50,17 @@ def test_model_prompts_hide_oracle_roots_and_limit_rag_to_retrieved_text() -> No
     assert "impact_oracle" not in rag and "root_node_ids" not in rag
     assert "before_design" in direct and "before_design" not in rag
     assert len(evidence) == 5 and len(retrieve_text_chunks(scenario, 5)) == 5
+    assert json.loads(rag)["relation_contract"]["verified_by"] == "requirement -> verification"
+    assert any(item["retrieval_stage"] == "linked_expansion" and item["link_score"] > 0 for item in evidence)
 
 
-def test_impact_parser_rejects_hallucinated_nodes() -> None:
+def test_impact_parser_retains_hallucinated_nodes_for_false_positive_scoring() -> None:
     scenario = next(item for item in generate_impact_benchmark(seed=47, cases_per_type=1) if item["impact_case_type"] == "component_replacement")
     content = json.dumps({"action": "report", "affected_node_ids": ["component:NOT-DECLARED"], "impact_edges": [], "rationale": "Unsupported."})
     report, diagnostics = parse_impact_content(content, scenario)
-    assert report["status"] == "rejected"
-    assert diagnostics == {"parse_success": False, "error": "invalid_affected_nodes"}
+    assert report["status"] == "completed"
+    assert report["affected_node_ids"] == ["component:NOT-DECLARED"]
+    assert diagnostics["parse_success"] is True and diagnostics["invalid_node_count"] == 1
 
 
 def test_impact_parser_reconstructs_paths_only_from_model_edges() -> None:
@@ -67,13 +70,14 @@ def test_impact_parser_reconstructs_paths_only_from_model_edges() -> None:
         (path["node_ids"][index], path["node_ids"][index + 1], relation)
         for path in oracle["impact_paths"] for index, relation in enumerate(path["relations"])
     }
+    predicted_edges = [{"source": source, "target": target, "relation": relation} for source, target, relation in sorted(edges)]
+    predicted_edges.append({"source": "change:invented", "target": oracle["affected_node_ids"][0], "relation": "contains_pin"})
     content = json.dumps({
-        "action": "report", "affected_node_ids": oracle["affected_node_ids"],
-        "impact_edges": [{"source": source, "target": target, "relation": relation} for source, target, relation in sorted(edges)],
+        "action": "report", "affected_node_ids": oracle["affected_node_ids"], "impact_edges": predicted_edges,
         "rationale": "All affected nodes are connected by supplied evidence edges.",
     })
     report, diagnostics = parse_impact_content(content, scenario)
-    assert diagnostics["parse_success"] is True
+    assert diagnostics["parse_success"] is True and diagnostics["invalid_edge_count"] == 1
     assert report["affected_node_ids"] == oracle["affected_node_ids"]
     assert report["impact_paths"] == oracle["impact_paths"]
 
@@ -91,9 +95,13 @@ def test_comparison_is_resumable_and_writes_only_data_outputs() -> None:
         assert metrics["modes"]["graph_deterministic"]["oracle_action_accuracy"] == 1.0
         assert metrics["modes"]["assurance_agent"]["oracle_action_accuracy"] == 1.0
         assert metrics["modes"]["assurance_agent"]["llm_call_count"] == 4
+        assert 0 < metrics["modes"]["text_rag"]["retrieval_node_recall"] <= 1
         assert all(len((output / mode / "impact_records.jsonl").read_text(encoding="utf-8").splitlines()) == 6 for mode in modes)
         manifest = json.loads((output / "evaluation_manifest.json").read_text(encoding="utf-8"))
         assert manifest["oracle_exposed_to_model"] is False and manifest["root_node_ids_exposed_to_model"] is False
+        assert manifest["agent_model_role"] == "ordered_tool_plan_selection_only"
+        assurance_rows = [json.loads(line) for line in (output / "assurance_agent" / "impact_records.jsonl").read_text(encoding="utf-8").splitlines()]
+        assert {row["model_role"] for row in assurance_rows} == {"ordered_tool_plan_selection_only"}
         assert not list(output.rglob("*.md"))
         run_impact_comparison(modes=modes, benchmark_path=benchmark, output_dir=output, profile="smoke", client=client)
         assert client.calls == first_call_count
