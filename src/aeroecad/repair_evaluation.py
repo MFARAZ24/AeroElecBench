@@ -245,7 +245,7 @@ def run_repair_experiment(
                 started = time.perf_counter()
                 report = agent.repair(scenario["design"], model, mode=repair_mode, seed=seed, max_tokens=max_tokens)
                 row = {
-                    "model": model, "repair_mode": summary["repair_mode"], "scenario_id": scenario["scenario_id"],
+                    "model": model, "repair_mode": repair_mode, "scenario_id": scenario["scenario_id"],
                     "scenario_sha256": scenario_hash, "category": scenario["category"],
                     "latency_ms": (time.perf_counter() - started) * 1000, "report": report,
                 }
