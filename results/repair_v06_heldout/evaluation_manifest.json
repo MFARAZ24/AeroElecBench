@@ -1,0 +1,17 @@
+{
+  "evaluation_id": "AEROELECBENCH-REPAIR-EVALUATION-0.6",
+  "benchmark_id": "AEROELECBENCH-REPAIR-HOLDOUT-0.6",
+  "benchmark_sha256": "34c7d0f4b726be1c19ad9b86d9905cfc0e76f42284f88130b5f1af811d384d23",
+  "model": "qwen2.5:7b",
+  "modes": [
+    "llm_direct",
+    "tool_evidence_grounded",
+    "deterministic_auto"
+  ],
+  "seed": 6107,
+  "temperature": 0,
+  "max_tokens": 300,
+  "oracle_exposed_to_model": false,
+  "narrative_output": false,
+  "metric_generation": "deterministic"
+}
