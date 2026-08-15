@@ -14,6 +14,10 @@ from .heldout import DEFAULT_BENCHMARK as HELDOUT_BENCHMARK
 from .heldout import DEFAULT_OUTPUT as HELDOUT_OUTPUT
 from .heldout import DEFAULT_SEED as HELDOUT_SEED
 from .heldout import prepare_heldout_benchmark, run_heldout_evaluation
+from .impact_evaluation import DEFAULT_BENCHMARK as IMPACT_BENCHMARK
+from .impact_evaluation import DEFAULT_OUTPUT as IMPACT_OUTPUT
+from .impact_evaluation import DEFAULT_SEED as IMPACT_SEED
+from .impact_evaluation import prepare_impact_development, run_impact_development
 from .llm_evaluation import run_llm_experiment
 from .llm_review import LLM_MODES
 from .ollama import OllamaClient
@@ -88,6 +92,14 @@ def _parser() -> argparse.ArgumentParser:
     heldout.add_argument("--max-tokens", type=int, default=300)
     heldout.add_argument("--cases-per-type", type=int, default=5)
     heldout.add_argument("--prepare-only", action="store_true")
+    impact = subparsers.add_parser("impact-prototype", help="Run the v0.7 versioned change-impact development prototype")
+    impact.add_argument("--benchmark", type=Path, default=IMPACT_BENCHMARK)
+    impact.add_argument("--output-dir", type=Path, default=IMPACT_OUTPUT)
+    impact.add_argument("--catalog", type=Path, default=None)
+    impact.add_argument("--source-registry", type=Path, default=Path("data/source_registry.json"))
+    impact.add_argument("--seed", type=int, default=IMPACT_SEED)
+    impact.add_argument("--cases-per-type", type=int, default=4)
+    impact.add_argument("--prepare-only", action="store_true")
     return parser
 
 
@@ -133,6 +145,24 @@ def main() -> None:
             result = {
                 "status": "complete", "scenario_count": metrics["scenario_count"],
                 "model": args.model, "results": str(args.output_dir),
+            }
+        print(json.dumps(result, indent=2))
+        return
+    if args.command == "impact-prototype":
+        if args.prepare_only:
+            scenarios, manifest = prepare_impact_development(
+                args.benchmark, args.catalog, args.source_registry, args.seed, args.cases_per_type,
+            )
+            result = {
+                "status": "prepared", "scenario_count": len(scenarios),
+                "benchmark": str(args.benchmark), "benchmark_sha256": manifest["benchmark_sha256"],
+                "split": "development",
+            }
+        else:
+            metrics = run_impact_development(args.benchmark, args.output_dir, args.catalog)
+            result = {
+                "status": "complete", "scenario_count": metrics["scenario_count"],
+                "mode": metrics["mode"], "results": str(args.output_dir), "split": "development",
             }
         print(json.dumps(result, indent=2))
         return

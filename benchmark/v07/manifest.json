@@ -1,0 +1,33 @@
+{
+  "benchmark_id": "AEROELECBENCH-IMPACT-DEVELOPMENT-0.7",
+  "benchmark": "impact_development_24.jsonl",
+  "benchmark_sha256": "e57f17e177ddca15522cccd7428bc8961d34d6fe18d449a789e6be764a7cb7de",
+  "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+  "catalog_version": "0.1.0",
+  "catalog_sha256": "ff00e849fdb489ad55dc02cca514fb133c8bf818bae9d9a2241842db35cd8c8f",
+  "source_registry_id": "AEROELECBENCH-SOURCES-0.1",
+  "source_registry_sha256": "34b3e4b95821edcc7854bb7b96625e09bcd5ab81eca583925c931108fba45280",
+  "seed": 7107,
+  "scenario_count": 24,
+  "case_type_counts": {
+    "clean": 4,
+    "component_replacement": 4,
+    "interacting_change": 4,
+    "missing_information": 4,
+    "pin_reassignment": 4,
+    "requirement_revision": 4
+  },
+  "split_counts": {
+    "development": 24
+  },
+  "oracle_validation_rate": 1.0,
+  "oracle_exposed_to_model": false,
+  "development_only": true,
+  "heldout": false,
+  "posthoc_tuning_allowed": true,
+  "production_modifications_allowed": false,
+  "dataset_kind": "fictional_synthetic",
+  "rule_classification": "research_only",
+  "certification_evidence": false,
+  "narrative_output": false
+}
