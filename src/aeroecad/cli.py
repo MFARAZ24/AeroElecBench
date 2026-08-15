@@ -13,6 +13,7 @@ from .llm_evaluation import run_llm_experiment
 from .llm_review import LLM_MODES
 from .ollama import OllamaClient
 from .repair_evaluation import run_repair_experiment
+from .llm_repair import REPAIR_MODES
 
 DEFAULT_MODELS = ["qwen2.5:7b", "llama3.1:8b", "mistral:7b"]
 
@@ -50,6 +51,7 @@ def _parser() -> argparse.ArgumentParser:
     repair.add_argument("--catalog", type=Path, default=None)
     repair.add_argument("--output-dir", type=Path, default=Path("results/repair"))
     repair.add_argument("--models", nargs="+", default=DEFAULT_MODELS)
+    repair.add_argument("--repair-mode", choices=REPAIR_MODES, default="llm_direct")
     repair.add_argument("--profile", choices=("smoke", "pilot", "full"), default="smoke")
     repair.add_argument("--base-url", default="http://localhost:11434")
     repair.add_argument("--timeout", type=float, default=300.0)
@@ -68,8 +70,8 @@ def main() -> None:
     if args.command == "repair-experiment":
         if not args.benchmark.exists():
             raise FileNotFoundError(f"Benchmark not found: {args.benchmark}. Run 'aeroecad generate' first.")
-        summary = run_repair_experiment(read_jsonl(args.benchmark), load_catalog(args.catalog), args.models, args.profile, args.output_dir, args.base_url, args.timeout, args.seed, args.max_tokens, args.benchmark)
-        print(json.dumps({"status": "complete", "profile": args.profile, "scenario_count": summary["scenario_count"], "models": args.models, "results": str(args.output_dir)}, indent=2))
+        summary = run_repair_experiment(read_jsonl(args.benchmark), load_catalog(args.catalog), args.models, args.profile, args.output_dir, args.base_url, args.timeout, args.seed, args.max_tokens, args.repair_mode, args.benchmark)
+        print(json.dumps({"status": "complete", "profile": args.profile, "repair_mode": args.repair_mode, "scenario_count": summary["scenario_count"], "models": args.models, "results": str(args.output_dir)}, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():

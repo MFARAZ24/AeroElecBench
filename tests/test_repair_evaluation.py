@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import re
@@ -78,6 +78,19 @@ class RepairEvaluationTests(unittest.TestCase):
             rows = (Path(directory) / "repair_responses.jsonl").read_text(encoding="utf-8").splitlines()
             self.assertEqual(len(rows), 7)
 
+
+    def test_deterministic_mode_repairs_without_model_calls(self) -> None:
+        FakeRepairClient.total_calls = 0
+        with tempfile.TemporaryDirectory() as directory, patch("aeroecad.repair_evaluation.OllamaClient", FakeRepairClient):
+            summary = run_repair_experiment(
+                self.scenarios, self.catalog, ["fake:7b"], "smoke", directory,
+                repair_mode="deterministic_auto",
+            )
+            metrics = summary["models"]["fake:7b"]
+            self.assertEqual(summary["repair_mode"], "deterministic_auto")
+            self.assertEqual(metrics["verified_repair_success_rate"], 1.0)
+            self.assertEqual(metrics["eligible_exact_restoration_rate"], 1.0)
+            self.assertEqual(FakeRepairClient.total_calls, 0)
 
 if __name__ == "__main__":
     unittest.main()

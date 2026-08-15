@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import hashlib
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .llm_evaluation import select_scenarios
-from .llm_repair import LLMRepairAgent
+from .llm_repair import LLMRepairAgent, REPAIR_MODES
 from .ollama import OllamaClient
 
 _EXECUTABLE = {"automatic", "constrained"}
@@ -29,15 +29,15 @@ def _scenario_hash(scenario: dict[str, Any]) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def _load_rows(path: Path) -> dict[tuple[str, str, str], dict[str, Any]]:
-    rows: dict[tuple[str, str, str], dict[str, Any]] = {}
+def _load_rows(path: Path) -> dict[tuple[str, str, str, str], dict[str, Any]]:
+    rows: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     if not path.exists():
         return rows
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             try:
                 row = json.loads(line)
-                rows[(row["model"], row["scenario_id"], row["scenario_sha256"])] = row
+                rows[(row["model"], row.get("repair_mode", "llm_direct"), row["scenario_id"], row["scenario_sha256"])] = row
             except (json.JSONDecodeError, KeyError):
                 continue
     return rows
@@ -161,7 +161,7 @@ def _save_outputs(summary: dict[str, Any], manifest: dict[str, Any], output: Pat
     (output / "repair_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
     fields = (
-        "model", "scenario_count", "eligible_repair_count", "verified_repair_success_rate",
+        "model", "repair_mode", "scenario_count", "eligible_repair_count", "verified_repair_success_rate",
         "oracle_patch_exact_match_rate", "eligible_exact_restoration_rate",
         "correct_abstention_rate", "clean_preservation_rate", "invalid_proposal_rate",
         "regression_attempt_count", "regression_rollback_success_rate",
@@ -172,8 +172,8 @@ def _save_outputs(summary: dict[str, Any], manifest: dict[str, Any], output: Pat
         writer.writeheader()
         for model, metrics in summary["models"].items():
             writer.writerow({
-                "model": model,
-                **{field: metrics[field] for field in fields[1:-1]},
+                "model": model, "repair_mode": summary["repair_mode"],
+                **{field: metrics[field] for field in fields[2:-1]},
                 "median_latency_ms": metrics["latency_ms"]["median"],
             })
 
@@ -192,7 +192,7 @@ def _save_outputs(summary: dict[str, Any], manifest: dict[str, Any], output: Pat
 
     note = f"""# AeroElecBench Verified Repair Results
 
-Profile: **{summary['profile']}**; scenarios per model: **{summary['scenario_count']}**.
+Repair mode: **{summary['repair_mode']}**; profile: **{summary['profile']}**; scenarios per model: **{summary['scenario_count']}**.
 
 | Model | Verified repair | Eligible exact restoration | Correct abstention | Clean preservation | Invalid proposal | Regression rollback | Production modifications |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -217,8 +217,11 @@ def run_repair_experiment(
     timeout: float = 300.0,
     seed: int = 2027,
     max_tokens: int = 400,
+    repair_mode: str = "llm_direct",
     benchmark_path: str | Path | None = None,
 ) -> dict[str, Any]:
+    if repair_mode not in REPAIR_MODES:
+        raise ValueError(f"repair_mode must be one of: {', '.join(REPAIR_MODES)}")
     selected, output = select_scenarios(scenarios, profile), Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     client = OllamaClient(base_url, timeout)
@@ -235,14 +238,14 @@ def run_repair_experiment(
         for model in models:
             for scenario in selected:
                 scenario_hash = scenario_hashes[scenario["scenario_id"]]
-                key = model, scenario["scenario_id"], scenario_hash
+                key = model, repair_mode, scenario["scenario_id"], scenario_hash
                 if key in existing:
                     continue
-                print(f"[{completed_now + 1}/{total}] {model} | repair | {scenario['scenario_id']}", flush=True)
+                print(f"[{completed_now + 1}/{total}] {model} | {repair_mode} | {scenario['scenario_id']}", flush=True)
                 started = time.perf_counter()
-                report = agent.repair(scenario["design"], model, seed=seed, max_tokens=max_tokens)
+                report = agent.repair(scenario["design"], model, mode=repair_mode, seed=seed, max_tokens=max_tokens)
                 row = {
-                    "model": model, "scenario_id": scenario["scenario_id"],
+                    "model": model, "repair_mode": summary["repair_mode"], "scenario_id": scenario["scenario_id"],
                     "scenario_sha256": scenario_hash, "category": scenario["category"],
                     "latency_ms": (time.perf_counter() - started) * 1000, "report": report,
                 }
@@ -254,7 +257,7 @@ def run_repair_experiment(
     grouped = {}
     for model in models:
         model_rows = [
-            existing[(model, item["scenario_id"], scenario_hashes[item["scenario_id"]])]
+            existing[(model, repair_mode, item["scenario_id"], scenario_hashes[item["scenario_id"]])]
             for item in selected
         ]
         grouped[model] = _evaluate_rows(model_rows, scenario_index)
@@ -262,7 +265,7 @@ def run_repair_experiment(
     summary = {
         "prototype": "AeroElecBench Verified Repair Agent",
         "version": "0.4.0",
-        "profile": profile,
+        "profile": profile, "repair_mode": repair_mode,
         "scenario_count": len(selected),
         "models": grouped,
         "interpretation": "Controlled synthetic verified-repair study; not certification evidence.",
@@ -272,7 +275,7 @@ def run_repair_experiment(
         if benchmark_path and Path(benchmark_path).exists() else None
     )
     manifest = {
-        "seed": seed, "profile": profile,
+        "seed": seed, "profile": profile, "repair_mode": repair_mode,
         "scenario_ids": [item["scenario_id"] for item in selected],
         "models": models, "temperature": 0, "max_tokens": max_tokens,
         "base_url": base_url, "benchmark_sha256": benchmark_hash,
