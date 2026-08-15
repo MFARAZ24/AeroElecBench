@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from aeroecad.catalog import load_catalog
-from aeroecad.e2e import prepare_repair_prototype
+from aeroecad.e2e import prepare_repair_prototype, run_e2e_prototype
 from aeroecad.ollama import OllamaResponse
 from aeroecad.repair_evaluation import run_repair_experiment
 
@@ -69,4 +69,21 @@ def test_dedicated_repair_benchmark_runs_end_to_end() -> None:
         assert metrics["oracle_action_accuracy"] == 1.0
         assert metrics["unsafe_accepted_abstention_count"] == 0
         assert metrics["production_modification_count"] == 0
-        assert CalibratedRepairClient.calls == 20
+        assert CalibratedRepairClient.calls == 10
+
+
+def test_protected_modes_report_operational_and_semantic_safety_separately() -> None:
+    CalibratedRepairClient.calls = 0
+    with tempfile.TemporaryDirectory() as directory, patch("aeroecad.repair_evaluation.OllamaClient", CalibratedRepairClient):
+        root = Path(directory)
+        summary = run_e2e_prototype(
+            model="fake:7b", modes=("tool_evidence_grounded", "deterministic_auto"),
+            benchmark_path=root / "repair.jsonl", output_dir=root / "results",
+        )
+        assert summary["safety_gates"] == {
+            "operational_all_modes": True,
+            "semantic_by_mode": {"tool_evidence_grounded": True, "deterministic_auto": True},
+            "protected_modes": True,
+        }
+        assert summary["modes"]["tool_evidence_grounded"]["correct_abstention_rate"] == 1.0
+        assert summary["modes"]["tool_evidence_grounded"]["unsafe_accepted_abstention_count"] == 0

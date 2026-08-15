@@ -85,20 +85,23 @@ def _pin_evidence(design: dict[str, Any], finding: dict[str, Any]) -> dict[str, 
         for component in target_components
     ]
     declared_ids = sorted(set.intersection(*target_pin_sets)) if target_pin_sets else []
-    target_pins = sorted(
-        {
-            (pin.get("id"), pin.get("signal_class"))
-            for component in target_components
-            for pin in component.get("pins", [])
-            if pin.get("id") in declared_ids
-        }
-    )
+    target_pins = sorted({
+        (pin.get("id"), pin.get("signal_class"), pin.get("interface_role"))
+        for component in target_components for pin in component.get("pins", [])
+        if pin.get("id") in declared_ids
+    }, key=lambda item: (str(item[0]), str(item[1]), str(item[2])))
     deterministic_matches = []
     if len(peer_classes) == 1:
         required_class = next(iter(peer_classes))
-        deterministic_matches = sorted({pin_id for pin_id, signal_class in target_pins if signal_class == required_class})
+        deterministic_matches = sorted({pin_id for pin_id, signal_class, _ in target_pins if signal_class == required_class})
     else:
         required_class = None
+
+    requirement_ids = set(wire.get("requirement_ids", []))
+    wire_requirements = [
+        {"requirement_id": item.get("id"), "text": item.get("text", "")}
+        for item in design.get("requirements", []) if item.get("id") in requirement_ids
+    ]
 
     return {
         "supported": bool(target_components and peer_pins),
@@ -111,7 +114,11 @@ def _pin_evidence(design: dict[str, Any], finding: dict[str, Any]) -> dict[str, 
             "endpoint_name": peer_name, "component_id": peer.get("component_id"),
             "pin_id": peer.get("pin_id"), "resolved_pins": peer_pins,
         },
-        "target_declared_pins": [{"pin_id": pin_id, "signal_class": signal_class} for pin_id, signal_class in target_pins],
+        "target_declared_pins": [
+            {"pin_id": pin_id, "signal_class": signal_class, "interface_role": interface_role}
+            for pin_id, signal_class, interface_role in target_pins
+        ],
+        "wire_requirements": wire_requirements,
         "declared_candidate_ids": declared_ids,
         "peer_signal_class": required_class,
         "deterministic_matches": deterministic_matches,
@@ -124,8 +131,21 @@ def _model_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
         "peer_endpoint": evidence.get("peer_endpoint"),
         "peer_signal_class": evidence.get("peer_signal_class"),
         "target_declared_pins": evidence.get("target_declared_pins", []),
+        "wire_requirements": evidence.get("wire_requirements", []),
         "instruction": "Choose by applying the rule to the evidence. No candidate has been preselected.",
     }
+
+
+def _has_unique_requirement_support(evidence: dict[str, Any]) -> bool:
+    matches = set(evidence.get("deterministic_matches", []))
+    if len(matches) == 1:
+        return True
+    requirement_text = " ".join(item.get("text", "") for item in evidence.get("wire_requirements", [])).lower()
+    primary_matches = [
+        item["pin_id"] for item in evidence.get("target_declared_pins", [])
+        if item.get("pin_id") in matches and item.get("interface_role") == "primary"
+    ]
+    return "primary" in requirement_text and len(primary_matches) == 1
 
 
 def parse_repair_content(content: str, allowed_paths: set[str], allowed_values: set[str] | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -225,6 +245,16 @@ class LLMRepairAgent:
                 continue
 
             evidence = _pin_evidence(working, finding)
+            if mode == "tool_evidence_grounded" and not _has_unique_requirement_support(evidence):
+                attempts.append({
+                    **base, "status": RepairStatus.ABSTAINED.value,
+                    "reason": "Grounding policy found no uniquely supported candidate; human review required.",
+                    "llm_call_performed": False, "tool_evidence": _model_evidence(evidence), "proposal": None,
+                    "introduced_findings": [], "resolved_findings": [],
+                    "diagnostics": {"parse_success": True, "raw_operation_count": 0, "invalid_operation_count": 0, "error": ""},
+                    "prompt_sha256": "", "ollama_metadata": {}, "raw_content": "",
+                })
+                continue
             if mode == "deterministic_auto":
                 matches = evidence["deterministic_matches"]
                 if len(matches) != 1:
