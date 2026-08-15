@@ -1,58 +1,143 @@
 {
-  "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
-  "title": "Synthetic Aerospace ECAD Verification Rule Catalog",
-  "version": "0.1.0",
-  "notice": "Fictional research rules for non-certification use; not derived from proprietary or airworthiness data.",
-  "rules": [
-    {
-      "rule_id": "AE-R001",
-      "title": "Required Component Attributes",
-      "section": "3.1",
-      "severity": "major",
-      "description": "Each installed component shall declare id, type, part_number, and zone metadata.",
-      "keywords": ["attribute", "metadata", "mandatory", "required", "incomplete", "part number", "zone", "installed unit", "equipment"],
-      "checker": "required_component_attributes",
-      "parameters": {"attributes": ["id", "type", "part_number", "zone"]}
-    },
-    {
-      "rule_id": "AE-R002",
-      "title": "Unique Component Identifiers",
-      "section": "3.2",
-      "severity": "critical",
-      "description": "Every component identifier shall be unique within one electrical design package.",
-      "keywords": ["unique", "duplicate", "repeated", "reused", "identifier", "equipment id", "collision"],
-      "checker": "unique_component_ids",
-      "parameters": {}
-    },
-    {
-      "rule_id": "AE-R003",
-      "title": "Valid Connector-Pin References",
-      "section": "4.1",
-      "severity": "critical",
-      "description": "Every wire endpoint shall resolve to a declared component and connector pin.",
-      "keywords": ["pin", "endpoint", "reference", "unresolved", "connector", "exists", "dangling", "wire"],
-      "checker": "valid_pin_references",
-      "parameters": {}
-    },
-    {
-      "rule_id": "AE-R004",
-      "title": "Compatible Electrical Connections",
-      "section": "4.2",
-      "severity": "critical",
-      "description": "The signal classes at the two valid endpoints of a wire shall be identical.",
-      "keywords": ["compatible", "signal class", "mismatch", "electrical", "connection", "connected pins", "voltage", "interface"],
-      "checker": "compatible_signal_classes",
-      "parameters": {}
-    },
-    {
-      "rule_id": "AE-R005",
-      "title": "Wire-to-Requirement Traceability",
-      "section": "5.1",
-      "severity": "major",
-      "description": "Every wire shall cite at least one requirement identifier declared by the design.",
-      "keywords": ["traceability", "requirement", "link", "allocation", "untraced", "rationale", "design requirement", "coverage"],
-      "checker": "wire_requirement_traceability",
-      "parameters": {}
-    }
-  ]
+    "catalog_id":  "AEROECAD-SYNTH-RULES-0.1",
+    "title":  "Synthetic Aerospace ECAD Verification Rule Catalog",
+    "version":  "0.1.0",
+    "notice":  "Fictional research rules for non-certification use; not derived from proprietary or airworthiness data.",
+    "rules":  [
+                  {
+                      "rule_id":  "AE-R001",
+                      "title":  "Required Component Attributes",
+                      "section":  "3.1",
+                      "severity":  "major",
+                      "description":  "Each installed component shall declare id, type, part_number, and zone metadata.",
+                      "keywords":  [
+                                       "attribute",
+                                       "metadata",
+                                       "mandatory",
+                                       "required",
+                                       "incomplete",
+                                       "part number",
+                                       "zone",
+                                       "installed unit",
+                                       "equipment"
+                                   ],
+                      "checker":  "required_component_attributes",
+                      "parameters":  {
+                                         "attributes":  [
+                                                            "id",
+                                                            "type",
+                                                            "part_number",
+                                                            "zone"
+                                                        ]
+                                     },
+                      "classification":  "research_only",
+                      "basis":  "Synthetic schema-completeness requirement",
+                      "source_refs":  [
+
+                                      ]
+                  },
+                  {
+                      "rule_id":  "AE-R002",
+                      "title":  "Unique Component Identifiers",
+                      "section":  "3.2",
+                      "severity":  "critical",
+                      "description":  "Every component identifier shall be unique within one electrical design package.",
+                      "keywords":  [
+                                       "unique",
+                                       "duplicate",
+                                       "repeated",
+                                       "reused",
+                                       "identifier",
+                                       "equipment id",
+                                       "collision"
+                                   ],
+                      "checker":  "unique_component_ids",
+                      "parameters":  {
+
+                                     },
+                      "classification":  "research_only",
+                      "basis":  "Synthetic data-integrity requirement",
+                      "source_refs":  [
+
+                                      ]
+                  },
+                  {
+                      "rule_id":  "AE-R003",
+                      "title":  "Valid Connector-Pin References",
+                      "section":  "4.1",
+                      "severity":  "critical",
+                      "description":  "Every wire endpoint shall resolve to a declared component and connector pin.",
+                      "keywords":  [
+                                       "pin",
+                                       "endpoint",
+                                       "reference",
+                                       "unresolved",
+                                       "connector",
+                                       "exists",
+                                       "dangling",
+                                       "wire"
+                                   ],
+                      "checker":  "valid_pin_references",
+                      "parameters":  {
+
+                                     },
+                      "classification":  "research_only",
+                      "basis":  "Synthetic referential-integrity requirement",
+                      "source_refs":  [
+
+                                      ]
+                  },
+                  {
+                      "rule_id":  "AE-R004",
+                      "title":  "Compatible Electrical Connections",
+                      "section":  "4.2",
+                      "severity":  "critical",
+                      "description":  "The signal classes at the two valid endpoints of a wire shall be identical.",
+                      "keywords":  [
+                                       "compatible",
+                                       "signal class",
+                                       "mismatch",
+                                       "electrical",
+                                       "connection",
+                                       "connected pins",
+                                       "voltage",
+                                       "interface"
+                                   ],
+                      "checker":  "compatible_signal_classes",
+                      "parameters":  {
+
+                                     },
+                      "classification":  "research_only",
+                      "basis":  "Synthetic exact-signal-class compatibility assumption",
+                      "source_refs":  [
+
+                                      ]
+                  },
+                  {
+                      "rule_id":  "AE-R005",
+                      "title":  "Wire-to-Requirement Traceability",
+                      "section":  "5.1",
+                      "severity":  "major",
+                      "description":  "Every wire shall cite at least one requirement identifier declared by the design.",
+                      "keywords":  [
+                                       "traceability",
+                                       "requirement",
+                                       "link",
+                                       "allocation",
+                                       "untraced",
+                                       "rationale",
+                                       "design requirement",
+                                       "coverage"
+                                   ],
+                      "checker":  "wire_requirement_traceability",
+                      "parameters":  {
+
+                                     },
+                      "classification":  "research_only",
+                      "basis":  "Synthetic traceability requirement",
+                      "source_refs":  [
+
+                                      ]
+                  }
+              ]
 }

@@ -1,0 +1,79 @@
+{
+  "registry_id": "AEROELECBENCH-SOURCES-0.1",
+  "version": "0.1.0",
+  "notice": "Reference registration does not establish standards compliance or certification suitability.",
+  "sources": [
+    {
+      "source_id": "CPACS",
+      "title": "Common Parametric Aircraft Configuration Schema",
+      "role": "representation_reference",
+      "format": "XML",
+      "url": "https://dlr-sl.github.io/cpacs-website/",
+      "revision": "not_pinned",
+      "usage": "Aircraft and multidisciplinary system hierarchy inspiration; not a wiring-compliance rule source."
+    },
+    {
+      "source_id": "VEC-2.2.0",
+      "title": "Vehicle Electric Container",
+      "role": "representation_reference",
+      "format": "XML, RDF/OWL and SHACL",
+      "url": "https://ecad-wiki.prostep.org/specifications/vec/",
+      "revision": "2.2.0",
+      "usage": "Vendor-neutral electrical-system, connectivity and harness data-model reference; not aerospace certification evidence."
+    },
+    {
+      "source_id": "WIREVIZ",
+      "title": "WireViz",
+      "role": "representation_reference",
+      "format": "YAML",
+      "url": "https://github.com/wireviz/WireViz",
+      "revision": "not_pinned",
+      "usage": "Human-readable cable, harness and connector-pin authoring reference; not an engineering standard."
+    },
+    {
+      "source_id": "PIXHAWK-STANDARDS",
+      "title": "Pixhawk Reference Standards",
+      "role": "open_design_reference",
+      "format": "Specifications and reference designs",
+      "url": "https://pixhawk.org/standards/",
+      "revision": "not_pinned",
+      "usage": "Realistic open drone connector, pinout and interface examples; applicability is limited to the Pixhawk ecosystem."
+    },
+    {
+      "source_id": "ORESAT",
+      "title": "OreSat Open Source CubeSat Project",
+      "role": "open_design_reference",
+      "format": "KiCad and project repositories",
+      "url": "https://github.com/oresat",
+      "revision": "not_pinned",
+      "usage": "Open aerospace subsystem and electrical-design examples; not a normative standard."
+    },
+    {
+      "source_id": "FAA-AC-43.13-1B-CHG1",
+      "title": "Acceptable Methods, Techniques, and Practices - Aircraft Inspection and Repair",
+      "role": "engineering_guidance",
+      "format": "PDF",
+      "url": "https://www.faa.gov/documentlibrary/media/advisory_circular/ac_43.13-1b_w-chg1.pdf",
+      "revision": "AC 43.13-1B with Change 1",
+      "usage": "Public FAA guidance; individual benchmark rules require exact paragraph mapping and applicability review."
+    },
+    {
+      "source_id": "NASA-STD-8739.4A",
+      "title": "Workmanship Standard for Crimping, Interconnecting Cables, Harnesses, and Wiring",
+      "role": "normative_standard",
+      "format": "PDF",
+      "url": "https://standards.nasa.gov/standard/NASA/NASA-STD-87394",
+      "revision": "A",
+      "usage": "Public NASA workmanship standard; individual benchmark rules require exact clause mapping and applicability review."
+    },
+    {
+      "source_id": "SAE-AS50881J",
+      "title": "Wiring Aerospace Vehicle",
+      "role": "restricted_normative_standard",
+      "format": "Licensed standard",
+      "url": "https://www.sae.org/standards/as50881j-as50881-wiring-aerospace-vehicle",
+      "revision": "J",
+      "usage": "Scope-level reference only until the exact licensed clauses are reviewed and recorded."
+    }
+  ]
+}
