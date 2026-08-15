@@ -115,6 +115,10 @@ def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[
     scenario_index = {item["scenario_id"]: item for item in scenarios}
     if len(records) != len(scenarios) or {item["scenario_id"] for item in records} != set(scenario_index):
         raise ValueError("Impact records do not cover every scenario exactly once")
+    modes = {item.get("mode") for item in records}
+    if len(modes) != 1 or None in modes:
+        raise ValueError("Impact records must belong to exactly one named mode")
+    mode = next(iter(modes))
     counts = defaultdict(int)
     per_case = defaultdict(lambda: defaultdict(int))
     for row in records:
@@ -128,6 +132,8 @@ def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[
         correct_action = predicted_action == expected_action and (expected_action != "report" or exact_set)
         counts["scenario_count"] += 1
         counts["correct_action_count"] += int(correct_action)
+        counts["llm_call_count"] += int(row.get("llm_call_count", 0))
+        counts["rejected_output_count"] += int(report["status"] == "rejected")
         counts["input_immutable_count"] += int(report["input_designs_unchanged"])
         counts["production_modification_count"] += int(report["production_modification_performed"])
         if expected_action == "report":
@@ -165,8 +171,9 @@ def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[
     path_precision = counts["path_true_positive"] / path_precision_denominator if path_precision_denominator else 0.0
     path_recall = counts["path_true_positive"] / path_recall_denominator if path_recall_denominator else 0.0
     return {
-        "mode": "graph_deterministic", "scenario_count": counts["scenario_count"],
+        "mode": mode, "scenario_count": counts["scenario_count"],
         "report_scenario_count": counts["report_scenario_count"],
+        "llm_call_count": counts["llm_call_count"], "rejected_output_count": counts["rejected_output_count"],
         "impact_set_precision": precision, "impact_set_recall": recall,
         "impact_set_f1": 2 * precision * recall / (precision + recall) if precision + recall else 0.0,
         "impact_exact_scenario_accuracy": counts["exact_set_count"] / counts["report_scenario_count"] if counts["report_scenario_count"] else 0.0,

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import copy
+import re
 from collections import deque
 from typing import Any
 
 REQUIRED_COLLECTIONS = ("components", "wires", "requirements", "verification_activities")
+_COMPONENT_PATH = re.compile(r"^components\[(\d+)](?:\.pins\[(\d+)])?")
+_WIRE_PATH = re.compile(r"^wires\[(\d+)](?:\.(source|target)\.pin_id)?")
+_REQUIREMENT_PATH = re.compile(r"^requirements\[(\d+)]")
 
 
 def component_node(component_id: str) -> str:
@@ -133,6 +137,49 @@ def compute_version_diff(before: Any, after: Any, path: str = "") -> list[dict[s
     return [] if before == after else [{"op": "replace", "path": path, "before": copy.deepcopy(before), "after": copy.deepcopy(after)}]
 
 
+def _item_at(design: dict[str, Any], collection: str, index: int) -> dict[str, Any] | None:
+    items = design.get(collection, [])
+    return items[index] if isinstance(items, list) and index < len(items) and isinstance(items[index], dict) else None
+
+
+def resolve_change_roots(before_design: dict[str, Any], after_design: dict[str, Any], operations: list[dict[str, Any]]) -> list[str]:
+    """Resolve graph roots from structured version operations without using the benchmark oracle."""
+    roots: set[str] = set()
+    for operation in operations:
+        path = str(operation.get("path", ""))
+        if match := _COMPONENT_PATH.match(path):
+            component_index, pin_index = int(match.group(1)), match.group(2)
+            for design in (before_design, after_design):
+                component = _item_at(design, "components", component_index)
+                if not component:
+                    continue
+                if pin_index is None:
+                    roots.add(component_node(str(component.get("id", ""))))
+                    continue
+                pins, index = component.get("pins", []), int(pin_index)
+                if index < len(pins):
+                    roots.add(pin_node(str(component.get("id", "")), str(pins[index].get("id", ""))))
+            continue
+        if match := _WIRE_PATH.match(path):
+            wire_index, endpoint_name = int(match.group(1)), match.group(2)
+            for design in (before_design, after_design):
+                wire = _item_at(design, "wires", wire_index)
+                if not wire:
+                    continue
+                roots.add(wire_node(str(wire.get("id", ""))))
+                if endpoint_name:
+                    endpoint = wire.get(endpoint_name, {})
+                    roots.add(pin_node(str(endpoint.get("component_id", "")), str(endpoint.get("pin_id", ""))))
+            continue
+        if match := _REQUIREMENT_PATH.match(path):
+            requirement_index = int(match.group(1))
+            for design in (before_design, after_design):
+                requirement = _item_at(design, "requirements", requirement_index)
+                if requirement:
+                    roots.add(requirement_node(str(requirement.get("id", ""))))
+    return sorted(root for root in roots if not root.endswith(":"))
+
+
 def traverse_impact(graph: dict[str, Any], root_ids: list[str], max_depth: int) -> tuple[list[str], list[dict[str, Any]]]:
     adjacency: dict[str, list[tuple[str, str]]] = {node_id: [] for node_id in graph["nodes"]}
     for edge in graph["edges"]:
@@ -170,7 +217,7 @@ def analyze_change_impact(before_design: dict[str, Any], after_design: dict[str,
     base = {
         "change_id": change_request.get("change_id"), "change_type": change_request.get("change_type"),
         "observed_diff": observed_diff, "graph_node_count": len(graph["nodes"]), "graph_edge_count": len(graph["edges"]),
-        "tool_trace": ["parse_versions", "compute_structured_diff", "build_typed_graph", "traverse_dependencies"],
+        "tool_trace": ["validate_change_evidence", "compute_version_diff", "build_version_graph", "resolve_change_roots", "traverse_dependencies", "validate_impact_report"],
         "production_modification_performed": False,
     }
     if not change_request.get("evidence_complete", True) or missing:
@@ -186,7 +233,7 @@ def analyze_change_impact(before_design: dict[str, Any], after_design: dict[str,
             "abstention_reason": "" if status == "no_change" else "Observed differences contradict the no-change request.",
             "input_designs_unchanged": before_design == before_copy and after_design == after_copy,
         }
-    root_ids = sorted(set(change_request.get("root_node_ids", [])))
+    root_ids = resolve_change_roots(before_design, after_design, list(change_request.get("operations", [])))
     unavailable = sorted(set(root_ids) - set(graph["nodes"]))
     if not root_ids or unavailable:
         return {

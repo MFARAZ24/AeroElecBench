@@ -18,6 +18,8 @@ from .impact_evaluation import DEFAULT_BENCHMARK as IMPACT_BENCHMARK
 from .impact_evaluation import DEFAULT_OUTPUT as IMPACT_OUTPUT
 from .impact_evaluation import DEFAULT_SEED as IMPACT_SEED
 from .impact_evaluation import prepare_impact_development, run_impact_development
+from .impact_agent import IMPACT_MODES
+from .impact_comparison import DEFAULT_COMPARISON_OUTPUT, run_impact_comparison
 from .llm_evaluation import run_llm_experiment
 from .llm_review import LLM_MODES
 from .ollama import OllamaClient
@@ -100,6 +102,18 @@ def _parser() -> argparse.ArgumentParser:
     impact.add_argument("--seed", type=int, default=IMPACT_SEED)
     impact.add_argument("--cases-per-type", type=int, default=4)
     impact.add_argument("--prepare-only", action="store_true")
+    comparison = subparsers.add_parser("impact-comparison", help="Run the resumable v0.7 change-impact mode comparison")
+    comparison.add_argument("--model", default="qwen2.5:7b")
+    comparison.add_argument("--modes", nargs="+", choices=IMPACT_MODES, default=list(IMPACT_MODES))
+    comparison.add_argument("--benchmark", type=Path, default=IMPACT_BENCHMARK)
+    comparison.add_argument("--output-dir", type=Path, default=DEFAULT_COMPARISON_OUTPUT)
+    comparison.add_argument("--catalog", type=Path, default=None)
+    comparison.add_argument("--base-url", default="http://localhost:11434")
+    comparison.add_argument("--timeout", type=float, default=300.0)
+    comparison.add_argument("--seed", type=int, default=IMPACT_SEED)
+    comparison.add_argument("--max-tokens", type=int, default=2500)
+    comparison.add_argument("--retrieval-top-k", type=int, default=12)
+    comparison.add_argument("--profile", choices=("smoke", "development"), default="development")
     return parser
 
 
@@ -165,6 +179,16 @@ def main() -> None:
                 "mode": metrics["mode"], "results": str(args.output_dir), "split": "development",
             }
         print(json.dumps(result, indent=2))
+        return
+    if args.command == "impact-comparison":
+        metrics = run_impact_comparison(
+            args.model, tuple(args.modes), args.benchmark, args.output_dir, args.catalog,
+            args.base_url, args.timeout, args.seed, args.max_tokens, args.retrieval_top_k, args.profile,
+        )
+        print(json.dumps({
+            "status": "complete", "scenario_count": metrics["scenario_count"], "model": args.model,
+            "modes": list(metrics["modes"]), "profile": args.profile, "results": str(args.output_dir),
+        }, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():
