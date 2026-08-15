@@ -5,7 +5,7 @@ import unittest
 
 from aeroecad.catalog import load_catalog
 from aeroecad.generator import generate_benchmark
-from aeroecad.llm_repair import LLMRepairAgent
+from aeroecad.llm_repair import LLMRepairAgent, parse_repair_content
 from aeroecad.ollama import OllamaResponse
 
 
@@ -87,6 +87,21 @@ class LLMRepairTests(unittest.TestCase):
             self.assertEqual(report["attempts"][0]["status"], "abstained")
             self.assertEqual(client.calls, [])
 
+    def test_json_pointer_paths_are_canonicalized_safely(self) -> None:
+        for path in ("/wires/0/target/pin_id", "/design/wires/0/target/pin_id"):
+            payload = {
+                "operations": [{"op": "replace", "path": path, "value": "PWR"}],
+                "rationale": "PWR matches POWER_28V.",
+                "abstained": False, "abstention_reason": "",
+            }
+            parsed, diagnostics = parse_repair_content(
+                json.dumps(payload),
+                {"wires[0].target.pin_id"},
+                {"PWR", "RTN", "DATA_H", "DATA_L"},
+            )
+            self.assertTrue(diagnostics["parse_success"])
+            self.assertEqual(parsed["operations"][0].path, "wires[0].target.pin_id")
+            self.assertEqual(parsed["operations"][0].value, "PWR")
     def test_out_of_scope_path_is_rejected(self) -> None:
         scenario = self.scenario("AE-R003")
         payload = {

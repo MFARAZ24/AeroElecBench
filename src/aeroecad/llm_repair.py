@@ -26,20 +26,26 @@ REPAIR_RESPONSE_SCHEMA = {
                 "required": ["op", "path", "value"],
             },
         },
-        "rationale": {"type": "string"},
+        "rationale": {"type": "string", "maxLength": 240},
         "abstained": {"type": "boolean"},
         "abstention_reason": {"type": "string"},
     },
     "required": ["operations", "rationale", "abstained", "abstention_reason"],
 }
-DIRECT_SYSTEM_PROMPT = """You propose one bounded repair for a fictional synthetic aerospace electrical-design JSON. Apply the supplied rule to the design and finding. Never invent a path. If the correction is not supported, abstain. Return exactly one JSON object and no markdown. A deterministic verifier decides whether the sandbox candidate is accepted."""
-EVIDENCE_SYSTEM_PROMPT = """You propose one bounded repair for a fictional synthetic aerospace electrical-design JSON. Apply the supplied rule using the tool-extracted peer endpoint and every declared target-pin candidate. The evidence does not identify the correct candidate; you must reason over the supplied properties. Never invent a path or candidate. If zero or multiple candidates are supported, abstain. Return exactly one JSON object and no markdown. A deterministic verifier decides whether the sandbox candidate is accepted."""
+DIRECT_SYSTEM_PROMPT = """You propose one bounded repair for a fictional synthetic aerospace electrical-design JSON. Apply the supplied rule to the design and finding. Never invent a path. If the correction is not supported, abstain. Keep the rationale under 25 words. Return exactly one JSON object and no markdown. A deterministic verifier decides whether the sandbox candidate is accepted."""
+EVIDENCE_SYSTEM_PROMPT = """You propose one bounded repair for a fictional synthetic aerospace electrical-design JSON. Apply the supplied rule using the tool-extracted peer endpoint and every declared target-pin candidate. The evidence does not identify the correct candidate; you must reason over the supplied properties. Never invent a path or candidate. If zero or multiple candidates are supported, abstain. Keep the rationale under 25 words. Return exactly one JSON object and no markdown. A deterministic verifier decides whether the sandbox candidate is accepted."""
 _RESPONSE_KEYS = {"operations", "rationale", "abstained", "abstention_reason"}
 _PIN_PATH = re.compile(r"^wires\[(\d+)\]\.(source|target)\.pin_id$")
 
 
 def _canonical_path(value: Any) -> str:
-    path = str(value or "").strip().replace("['", ".").replace("']", "").replace('["', ".").replace('"]', "")
+    path = str(value or "").strip()
+    if path.startswith("/"):
+        parts = [segment.replace("~1", "/").replace("~0", "~") for segment in path.split("/") if segment]
+        if parts and parts[0] in {"design", "$"}:
+            parts = parts[1:]
+        path = ".".join(parts)
+    path = path.replace("['", ".").replace("']", "").replace('["', ".").replace('"]', "")
     path = re.sub(r"^(?:\$\.|design\.)", "", path)
     return re.sub(r"\.(\d+)(?=\.|$)", r"[\1]", path)
 
@@ -189,7 +195,7 @@ class LLMRepairAgent:
             "allowed_operations": ["replace"],
             "output_contract": {
                 "operations": "Exactly one replace operation, or an empty array when abstaining.",
-                "rationale": "Short evidence-based justification.",
+                "rationale": "Maximum 25 words; state only the decisive evidence.",
             },
             "design": design,
         }
