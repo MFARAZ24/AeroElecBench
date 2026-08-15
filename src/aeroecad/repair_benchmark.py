@@ -8,6 +8,15 @@ from typing import Any
 from .generator import generate_benchmark
 
 REPAIR_CASE_TYPES = ("clean", "automatic", "constrained", "ambiguous", "insufficient")
+BENCHMARK_PROVENANCE = {
+    "dataset_kind": "fictional_synthetic",
+    "source_registry_id": "AEROELECBENCH-SOURCES-0.1",
+    "representation_references": ["CPACS", "VEC-2.2.0", "WIREVIZ"],
+    "open_design_references": ["PIXHAWK-STANDARDS", "ORESAT"],
+    "rule_classification": "research_only",
+    "direct_source_conversion": False,
+    "certification_evidence": False,
+}
 
 
 def _component(design: dict[str, Any], component_id: str) -> dict[str, Any]:
@@ -146,6 +155,8 @@ def generate_repair_benchmark(seed: int = 4107, cases_per_type: int = 5) -> list
                 "repair_oracle": _oracle(expected_action, expected_operation, expected_design),
             })
 
+    for scenario in scenarios:
+        scenario["provenance"] = copy.deepcopy(BENCHMARK_PROVENANCE)
     return scenarios
 
 

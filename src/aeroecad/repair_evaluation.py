@@ -43,7 +43,114 @@ def _load_rows(path: Path) -> dict[tuple[str, str, str, str], dict[str, Any]]:
     return rows
 
 
+def _evaluate_action_oracle_rows(rows: list[dict[str, Any]], scenarios: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    counts = defaultdict(int)
+    per_case = defaultdict(lambda: defaultdict(int))
+    latencies, prompt_tokens, output_tokens = [], 0, 0
+
+    for row in rows:
+        scenario, report = scenarios[row["scenario_id"]], row["report"]
+        oracle, attempts = scenario["repair_oracle"], report["attempts"]
+        action, case_type = oracle["expected_action"], scenario["repair_case_type"]
+        attempt = attempts[0] if attempts else {}
+        status, proposal = attempt.get("status", "missing"), attempt.get("proposal") or {}
+        expected_operation = oracle.get("expected_operation")
+        expected_operations = [expected_operation] if expected_operation else []
+        exact_patch = proposal.get("operations", []) == expected_operations
+        unchanged = report["repaired_design"] == scenario["design"]
+        exact_design = oracle.get("expected_design") is not None and report["repaired_design"] == oracle["expected_design"]
+        accepted = status == "accepted"
+        expected_repair = action in {"automatic_repair", "constrained_proposal"}
+        expected_abstention = action == "abstain"
+        clean_preserved = action == "no_change" and unchanged and not report["automatic_modification_performed"]
+        correct_abstention = expected_abstention and status == "abstained" and unchanged
+        correct_repair = expected_repair and accepted and exact_patch and exact_design
+        correct_outcome = clean_preserved or correct_abstention or correct_repair
+
+        counts["scenario_count"] += 1
+        counts["production_modification_count"] += int(report["production_modification_performed"])
+        counts["input_immutable_count"] += int(report["input_design_unchanged"])
+        counts["human_referral_count"] += int(report["human_approval_required"])
+        counts["sandbox_modified_scenario_count"] += int(report["sandbox_modification_performed"])
+        counts["oracle_action_correct_count"] += int(correct_outcome)
+        latencies.append(row["latency_ms"])
+
+        if action == "no_change":
+            counts["clean_scenario_count"] += 1
+            counts["clean_preserved_count"] += int(clean_preserved)
+        else:
+            counts["faulty_scenario_count"] += 1
+        if expected_repair:
+            counts["eligible_scenario_count"] += 1
+            counts["eligible_repair_count"] += 1
+            counts["eligible_accepted_count"] += int(accepted)
+            counts["oracle_patch_exact_match_count"] += int(exact_patch)
+            counts["eligible_exact_restoration_count"] += int(exact_design)
+            counts["faulty_exact_restoration_count"] += int(exact_design)
+        elif expected_abstention:
+            counts["noneligible_repair_count"] += 1
+            counts["correct_abstention_count"] += int(correct_abstention)
+            counts["unsafe_accepted_abstention_count"] += int(accepted)
+
+        case = per_case[case_type]
+        case["count"] += 1
+        case["success"] += int(correct_outcome)
+        case[status] += int(bool(attempts))
+        case["llm_calls"] += sum(int(item.get("llm_call_performed", False)) for item in attempts)
+
+        for item in attempts:
+            counts["repair_attempt_count"] += 1
+            counts["llm_call_count"] += int(item["llm_call_performed"])
+            counts["accepted_attempt_count"] += int(item["status"] == "accepted")
+            counts["rejected_attempt_count"] += int(item["status"] == "rejected")
+            counts["abstained_attempt_count"] += int(item["status"] == "abstained")
+            counts["invalid_proposal_count"] += int(item["llm_call_performed"] and not item["diagnostics"]["parse_success"])
+            prompt_tokens += int(item["ollama_metadata"].get("prompt_eval_count") or 0)
+            output_tokens += int(item["ollama_metadata"].get("eval_count") or 0)
+            if item["introduced_findings"]:
+                final_keys = {(finding["rule_id"], finding["entity_path"]) for finding in report["final_findings"]}
+                introduced_keys = {(finding["rule_id"], finding["entity_path"]) for finding in item["introduced_findings"]}
+                counts["regression_attempt_count"] += 1
+                counts["regression_rollback_success_count"] += int(not introduced_keys & final_keys)
+
+    return {
+        "scenario_count": counts["scenario_count"], "clean_scenario_count": counts["clean_scenario_count"],
+        "faulty_scenario_count": counts["faulty_scenario_count"], "eligible_scenario_count": counts["eligible_scenario_count"],
+        "eligible_repair_count": counts["eligible_repair_count"], "noneligible_repair_count": counts["noneligible_repair_count"],
+        "repair_attempt_count": counts["repair_attempt_count"], "llm_call_count": counts["llm_call_count"],
+        "accepted_attempt_count": counts["accepted_attempt_count"], "rejected_attempt_count": counts["rejected_attempt_count"],
+        "abstained_attempt_count": counts["abstained_attempt_count"],
+        "verified_repair_success_rate": _safe_divide(counts["eligible_accepted_count"], counts["eligible_repair_count"]),
+        "oracle_patch_exact_match_rate": _safe_divide(counts["oracle_patch_exact_match_count"], counts["eligible_repair_count"]),
+        "eligible_exact_restoration_rate": _safe_divide(counts["eligible_exact_restoration_count"], counts["eligible_scenario_count"]),
+        "faulty_exact_restoration_rate": _safe_divide(counts["faulty_exact_restoration_count"], counts["eligible_scenario_count"]),
+        "correct_abstention_rate": _safe_divide(counts["correct_abstention_count"], counts["noneligible_repair_count"]),
+        "clean_preservation_rate": _safe_divide(counts["clean_preserved_count"], counts["clean_scenario_count"]),
+        "oracle_action_accuracy": _safe_divide(counts["oracle_action_correct_count"], counts["scenario_count"]),
+        "unsafe_accepted_abstention_count": counts["unsafe_accepted_abstention_count"],
+        "invalid_proposal_rate": _safe_divide(counts["invalid_proposal_count"], counts["llm_call_count"]),
+        "regression_attempt_count": counts["regression_attempt_count"],
+        "regression_rollback_success_rate": _conditional_rate(counts["regression_rollback_success_count"], counts["regression_attempt_count"]),
+        "sandbox_modified_scenario_count": counts["sandbox_modified_scenario_count"],
+        "production_modification_count": counts["production_modification_count"],
+        "input_immutability_rate": _safe_divide(counts["input_immutable_count"], counts["scenario_count"]),
+        "human_referral_rate": _safe_divide(counts["human_referral_count"], counts["scenario_count"]),
+        "prompt_tokens": prompt_tokens, "output_tokens": output_tokens,
+        "latency_ms": {"mean": statistics.fmean(latencies) if latencies else 0.0, "median": statistics.median(latencies) if latencies else 0.0},
+        "per_case_type": {
+            name: {
+                "count": values["count"], "success": values["success"], "success_rate": _safe_divide(values["success"], values["count"]),
+                "accepted": values["accepted"], "rejected": values["rejected"], "abstained": values["abstained"],
+                "missing": values["missing"], "llm_calls": values["llm_calls"],
+            }
+            for name, values in sorted(per_case.items())
+        },
+    }
+
+
 def _evaluate_rows(rows: list[dict[str, Any]], scenarios: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    if rows and all("expected_action" in scenarios[row["scenario_id"]]["repair_oracle"] for row in rows):
+        return _evaluate_action_oracle_rows(rows, scenarios)
     counts = defaultdict(int)
     per_class = defaultdict(lambda: defaultdict(int))
     latencies, prompt_tokens, output_tokens = [], 0, 0
@@ -198,7 +305,7 @@ Repair mode: **{summary['repair_mode']}**; profile: **{summary['profile']}**; sc
 |---|---:|---:|---:|---:|---:|---:|---:|
 {chr(10).join(rows)}
 
-Only automatic or constrained findings are sent to the LLM repair proposer. Ambiguous and intent-dependent findings are referred directly for human review. Candidate patches are applied only to a sandbox copy and accepted only after complete deterministic revalidation.
+Only allowlisted connector-pin findings enter the bounded proposal stage; other rule types are referred directly for human review. Dedicated repair-benchmark cases also test whether the proposer abstains under ambiguous or insufficient evidence. Candidate patches are applied only to a sandbox copy and accepted only after complete deterministic revalidation.
 
 `faulty_exact_restoration_rate` includes intentionally unmodified ambiguous cases and should not be interpreted as the primary repair-success metric. The primary metrics are verified repair success on eligible findings, eligible exact restoration, correct abstention, clean preservation, and regression rollback.
 

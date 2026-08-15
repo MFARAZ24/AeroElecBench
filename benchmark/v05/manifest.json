@@ -1,0 +1,30 @@
+{
+  "benchmark_id": "AEROELECBENCH-REPAIR-E2E-0.5",
+  "benchmark": "repair_e2e_25.jsonl",
+  "benchmark_sha256": "873e91ad1537a6b32d64f55e62fea265c9144fa571eabd904bc60a05300b6dc9",
+  "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+  "catalog_version": "0.1.0",
+  "catalog_sha256": "ff00e849fdb489ad55dc02cca514fb133c8bf818bae9d9a2241842db35cd8c8f",
+  "source_registry_id": "AEROELECBENCH-SOURCES-0.1",
+  "source_registry_sha256": "34b3e4b95821edcc7854bb7b96625e09bcd5ab81eca583925c931108fba45280",
+  "seed": 4107,
+  "scenario_count": 25,
+  "case_type_counts": {
+    "ambiguous": 5,
+    "automatic": 5,
+    "clean": 5,
+    "constrained": 5,
+    "insufficient": 5
+  },
+  "split_counts": {
+    "development": 10,
+    "heldout": 15
+  },
+  "ground_truth_violation_count": 20,
+  "oracle_validation_rate": 1.0,
+  "oracle_exposed_to_model": false,
+  "production_modifications_allowed": false,
+  "dataset_kind": "fictional_synthetic",
+  "rule_classification": "research_only",
+  "certification_evidence": false
+}

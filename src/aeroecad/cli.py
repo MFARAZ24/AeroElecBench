@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .catalog import load_catalog
 from .evaluation import evaluate, save_results
+from .e2e import run_e2e_prototype
 from .generator import generate_benchmark, read_jsonl, write_jsonl
 from .llm_evaluation import run_llm_experiment
 from .llm_review import LLM_MODES
@@ -57,6 +58,19 @@ def _parser() -> argparse.ArgumentParser:
     repair.add_argument("--timeout", type=float, default=300.0)
     repair.add_argument("--seed", type=int, default=2027)
     repair.add_argument("--max-tokens", type=int, default=400)
+    prototype = subparsers.add_parser("repair-prototype", help="Run the 25-case end-to-end verified-repair prototype")
+    prototype.add_argument("--model", default="qwen2.5:7b")
+    prototype.add_argument("--modes", nargs="+", choices=REPAIR_MODES, default=list(REPAIR_MODES))
+    prototype.add_argument("--benchmark", type=Path, default=Path("benchmark/v05/repair_e2e_25.jsonl"))
+    prototype.add_argument("--output-dir", type=Path, default=Path("results/repair_v05_e2e"))
+    prototype.add_argument("--catalog", type=Path, default=None)
+    prototype.add_argument("--source-registry", type=Path, default=Path("data/source_registry.json"))
+    prototype.add_argument("--base-url", default="http://localhost:11434")
+    prototype.add_argument("--timeout", type=float, default=300.0)
+    prototype.add_argument("--seed", type=int, default=4107)
+    prototype.add_argument("--max-tokens", type=int, default=300)
+    prototype.add_argument("--cases-per-type", type=int, default=5)
+    prototype.add_argument("--prepare-only", action="store_true")
     return parser
 
 
@@ -72,6 +86,18 @@ def main() -> None:
             raise FileNotFoundError(f"Benchmark not found: {args.benchmark}. Run 'aeroecad generate' first.")
         summary = run_repair_experiment(read_jsonl(args.benchmark), load_catalog(args.catalog), args.models, args.profile, args.output_dir, args.base_url, args.timeout, args.seed, args.max_tokens, args.repair_mode, args.benchmark)
         print(json.dumps({"status": "complete", "profile": args.profile, "repair_mode": args.repair_mode, "scenario_count": summary["scenario_count"], "models": args.models, "results": str(args.output_dir)}, indent=2))
+        return
+    if args.command == "repair-prototype":
+        summary = run_e2e_prototype(
+            args.model, tuple(args.modes), args.benchmark, args.output_dir, args.catalog,
+            args.source_registry, args.base_url, args.timeout, args.seed, args.max_tokens,
+            args.cases_per_type, args.prepare_only,
+        )
+        print(json.dumps({
+            "status": summary.get("status", "complete"), "scenario_count": summary["scenario_count"],
+            "model": None if args.prepare_only else args.model, "benchmark": str(args.benchmark),
+            "results": None if args.prepare_only else str(args.output_dir),
+        }, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():
