@@ -67,7 +67,12 @@ def _split(case_index: int) -> str:
     return "development" if case_index < 2 else "heldout"
 
 
-def generate_repair_benchmark(seed: int = 4107, cases_per_type: int = 5) -> list[dict[str, Any]]:
+def generate_repair_benchmark(
+    seed: int = 4107,
+    cases_per_type: int = 5,
+    split_override: str | None = None,
+    scenario_prefix: str = "repair",
+) -> list[dict[str, Any]]:
     total = len(REPAIR_CASE_TYPES) * cases_per_type
     bases = generate_benchmark(seed=seed, cases_per_rule=0, clean_cases=total, mixed_cases=0)
     scenarios: list[dict[str, Any]] = []
@@ -77,8 +82,8 @@ def generate_repair_benchmark(seed: int = 4107, cases_per_type: int = 5) -> list
         for case_index in range(cases_per_type):
             design = copy.deepcopy(bases[base_index]["design"])
             base_index += 1
-            scenario_id = f"repair-{case_type}-{case_index:03d}"
-            split = _split(case_index)
+            scenario_id = f"{scenario_prefix}-{case_type}-{case_index:03d}"
+            split = split_override or _split(case_index)
 
             if case_type == "clean":
                 scenarios.append({
@@ -163,7 +168,7 @@ def generate_repair_benchmark(seed: int = 4107, cases_per_type: int = 5) -> list
 def write_repair_benchmark(scenarios: list[dict[str, Any]], path: str | Path) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("w", encoding="utf-8") as handle:
+    with output.open("w", encoding="utf-8", newline="\n") as handle:
         for scenario in scenarios:
             handle.write(json.dumps(scenario, sort_keys=True) + "\n")
 

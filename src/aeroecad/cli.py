@@ -10,6 +10,10 @@ from .catalog import load_catalog
 from .evaluation import evaluate, save_results
 from .e2e import run_e2e_prototype
 from .generator import generate_benchmark, read_jsonl, write_jsonl
+from .heldout import DEFAULT_BENCHMARK as HELDOUT_BENCHMARK
+from .heldout import DEFAULT_OUTPUT as HELDOUT_OUTPUT
+from .heldout import DEFAULT_SEED as HELDOUT_SEED
+from .heldout import prepare_heldout_benchmark, run_heldout_evaluation
 from .llm_evaluation import run_llm_experiment
 from .llm_review import LLM_MODES
 from .ollama import OllamaClient
@@ -71,6 +75,19 @@ def _parser() -> argparse.ArgumentParser:
     prototype.add_argument("--max-tokens", type=int, default=300)
     prototype.add_argument("--cases-per-type", type=int, default=5)
     prototype.add_argument("--prepare-only", action="store_true")
+    heldout = subparsers.add_parser("repair-heldout", help="Run the frozen v0.6 held-out repair evaluation")
+    heldout.add_argument("--model", default="qwen2.5:7b")
+    heldout.add_argument("--modes", nargs="+", choices=REPAIR_MODES, default=list(REPAIR_MODES))
+    heldout.add_argument("--benchmark", type=Path, default=HELDOUT_BENCHMARK)
+    heldout.add_argument("--output-dir", type=Path, default=HELDOUT_OUTPUT)
+    heldout.add_argument("--catalog", type=Path, default=None)
+    heldout.add_argument("--source-registry", type=Path, default=Path("data/source_registry.json"))
+    heldout.add_argument("--base-url", default="http://localhost:11434")
+    heldout.add_argument("--timeout", type=float, default=300.0)
+    heldout.add_argument("--seed", type=int, default=HELDOUT_SEED)
+    heldout.add_argument("--max-tokens", type=int, default=300)
+    heldout.add_argument("--cases-per-type", type=int, default=5)
+    heldout.add_argument("--prepare-only", action="store_true")
     return parser
 
 
@@ -98,6 +115,26 @@ def main() -> None:
             "model": None if args.prepare_only else args.model, "benchmark": str(args.benchmark),
             "results": None if args.prepare_only else str(args.output_dir),
         }, indent=2))
+        return
+    if args.command == "repair-heldout":
+        if args.prepare_only:
+            scenarios, manifest = prepare_heldout_benchmark(
+                args.benchmark, args.catalog, args.source_registry, args.seed, args.cases_per_type,
+            )
+            result = {
+                "status": "prepared", "scenario_count": len(scenarios),
+                "benchmark": str(args.benchmark), "benchmark_sha256": manifest["benchmark_sha256"],
+            }
+        else:
+            metrics = run_heldout_evaluation(
+                args.model, tuple(args.modes), args.benchmark, args.output_dir, args.catalog,
+                args.base_url, args.timeout, args.seed, args.max_tokens,
+            )
+            result = {
+                "status": "complete", "scenario_count": metrics["scenario_count"],
+                "model": args.model, "results": str(args.output_dir),
+            }
+        print(json.dumps(result, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():

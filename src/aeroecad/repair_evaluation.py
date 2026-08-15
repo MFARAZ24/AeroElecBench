@@ -326,6 +326,7 @@ def run_repair_experiment(
     max_tokens: int = 400,
     repair_mode: str = "llm_direct",
     benchmark_path: str | Path | None = None,
+    save_aggregate_outputs: bool = True,
 ) -> dict[str, Any]:
     if repair_mode not in REPAIR_MODES:
         raise ValueError(f"repair_mode must be one of: {', '.join(REPAIR_MODES)}")
@@ -388,5 +389,6 @@ def run_repair_experiment(
         "base_url": base_url, "benchmark_sha256": benchmark_hash,
         "oracle_exposed_to_model": False, "production_modifications_allowed": False,
     }
-    _save_outputs(summary, manifest, output)
+    if save_aggregate_outputs:
+        _save_outputs(summary, manifest, output)
     return summary
