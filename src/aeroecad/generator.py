@@ -60,7 +60,7 @@ def _base_design(index: int, rng: random.Random) -> dict[str, Any]:
         components.append({
             "id": f"LRU-{index:04d}-{position:02d}", "type": component_types[position % len(component_types)],
             "part_number": f"SYN-PN-{rng.randint(1000, 9999)}", "zone": zones[position % len(zones)],
-            "pins": copy.deepcopy(PIN_DEFINITIONS),
+            "pins": [copy.deepcopy(pin) for pin in PIN_DEFINITIONS],
         })
     requirements = [
         {"id": "REQ-PWR", "text": "Fictional 28 VDC distribution continuity requirement."},

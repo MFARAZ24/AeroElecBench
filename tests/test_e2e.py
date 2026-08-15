@@ -48,6 +48,7 @@ def test_prepare_prototype_writes_balanced_validated_dataset() -> None:
         assert set(manifest["case_type_counts"].values()) == {5}
         assert benchmark.exists() and benchmark.with_name("manifest.json").exists()
         assert all(not item["provenance"]["certification_evidence"] for item in scenarios)
+        assert json.loads(json.dumps(scenarios)) == scenarios
 
 
 def test_dedicated_repair_benchmark_runs_end_to_end() -> None:
@@ -69,6 +70,14 @@ def test_dedicated_repair_benchmark_runs_end_to_end() -> None:
         assert metrics["oracle_action_accuracy"] == 1.0
         assert metrics["unsafe_accepted_abstention_count"] == 0
         assert metrics["production_modification_count"] == 0
+        assert CalibratedRepairClient.calls == 10
+        with patch("aeroecad.repair_evaluation.OllamaClient", CalibratedRepairClient):
+            resumed = run_repair_experiment(
+                scenarios, load_catalog(), ["fake:7b"], "full", root / "results",
+                repair_mode="tool_evidence_grounded",
+            )["models"]["fake:7b"]
+        assert resumed["eligible_exact_restoration_rate"] == 1.0
+        assert resumed["clean_preservation_rate"] == 1.0
         assert CalibratedRepairClient.calls == 10
 
 
