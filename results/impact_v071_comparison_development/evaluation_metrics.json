@@ -1,0 +1,244 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-COMPARISON-0.7.1",
+  "model": "qwen2.5:7b",
+  "profile": "development",
+  "scenario_count": 24,
+  "modes": {
+    "llm_only": {
+      "mode": "llm_only",
+      "scenario_count": 24,
+      "report_scenario_count": 16,
+      "llm_call_count": 24,
+      "rejected_output_count": 0,
+      "invalid_node_count": 8,
+      "duplicate_node_count": 0,
+      "invalid_edge_count": 49,
+      "valid_edge_count": 18,
+      "invalid_edge_rate": 0.7313432835820896,
+      "retrieval_node_recall": null,
+      "impact_set_precision": 0.8181818181818182,
+      "impact_set_recall": 0.19148936170212766,
+      "impact_set_f1": 0.31034482758620685,
+      "impact_exact_scenario_accuracy": 0.0,
+      "path_precision": 0.9285714285714286,
+      "path_recall": 0.0790273556231003,
+      "path_f1": 0.14565826330532214,
+      "multi_hop_recall": 0.0,
+      "abstention_precision": 0.4444444444444444,
+      "abstention_recall": 1.0,
+      "clean_case_specificity": 0.0,
+      "oracle_action_accuracy": 0.16666666666666666,
+      "production_modification_count": 0,
+      "input_immutability_rate": 1.0,
+      "per_case_type": {
+        "clean": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "component_replacement": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "interacting_change": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "missing_information": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "pin_reassignment": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "requirement_revision": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        }
+      }
+    },
+    "text_rag": {
+      "mode": "text_rag",
+      "scenario_count": 24,
+      "report_scenario_count": 16,
+      "llm_call_count": 24,
+      "rejected_output_count": 0,
+      "invalid_node_count": 2,
+      "duplicate_node_count": 1,
+      "invalid_edge_count": 78,
+      "valid_edge_count": 0,
+      "invalid_edge_rate": 1.0,
+      "retrieval_node_recall": 0.7963525835866262,
+      "impact_set_precision": 0.6470588235294118,
+      "impact_set_recall": 0.16717325227963525,
+      "impact_set_f1": 0.26570048309178745,
+      "impact_exact_scenario_accuracy": 0.0,
+      "path_precision": 1.0,
+      "path_recall": 0.015197568389057751,
+      "path_f1": 0.029940119760479042,
+      "multi_hop_recall": 0.0,
+      "abstention_precision": 0.0,
+      "abstention_recall": 0.0,
+      "clean_case_specificity": 0.0,
+      "oracle_action_accuracy": 0.0,
+      "production_modification_count": 0,
+      "input_immutability_rate": 1.0,
+      "per_case_type": {
+        "clean": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "component_replacement": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "interacting_change": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "missing_information": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "pin_reassignment": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        },
+        "requirement_revision": {
+          "count": 4,
+          "correct": 0,
+          "accuracy": 0.0
+        }
+      }
+    },
+    "graph_deterministic": {
+      "mode": "graph_deterministic",
+      "scenario_count": 24,
+      "report_scenario_count": 16,
+      "llm_call_count": 0,
+      "rejected_output_count": 0,
+      "invalid_node_count": 0,
+      "duplicate_node_count": 0,
+      "invalid_edge_count": 0,
+      "valid_edge_count": 0,
+      "invalid_edge_rate": 0.0,
+      "retrieval_node_recall": null,
+      "impact_set_precision": 1.0,
+      "impact_set_recall": 1.0,
+      "impact_set_f1": 1.0,
+      "impact_exact_scenario_accuracy": 1.0,
+      "path_precision": 1.0,
+      "path_recall": 1.0,
+      "path_f1": 1.0,
+      "multi_hop_recall": 1.0,
+      "abstention_precision": 1.0,
+      "abstention_recall": 1.0,
+      "clean_case_specificity": 1.0,
+      "oracle_action_accuracy": 1.0,
+      "production_modification_count": 0,
+      "input_immutability_rate": 1.0,
+      "per_case_type": {
+        "clean": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "component_replacement": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "interacting_change": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "missing_information": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "pin_reassignment": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "requirement_revision": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        }
+      }
+    },
+    "assurance_agent": {
+      "mode": "assurance_agent",
+      "scenario_count": 24,
+      "report_scenario_count": 16,
+      "llm_call_count": 16,
+      "rejected_output_count": 0,
+      "invalid_node_count": 0,
+      "duplicate_node_count": 0,
+      "invalid_edge_count": 0,
+      "valid_edge_count": 0,
+      "invalid_edge_rate": 0.0,
+      "retrieval_node_recall": null,
+      "impact_set_precision": 1.0,
+      "impact_set_recall": 1.0,
+      "impact_set_f1": 1.0,
+      "impact_exact_scenario_accuracy": 1.0,
+      "path_precision": 1.0,
+      "path_recall": 1.0,
+      "path_f1": 1.0,
+      "multi_hop_recall": 1.0,
+      "abstention_precision": 1.0,
+      "abstention_recall": 1.0,
+      "clean_case_specificity": 1.0,
+      "oracle_action_accuracy": 1.0,
+      "production_modification_count": 0,
+      "input_immutability_rate": 1.0,
+      "per_case_type": {
+        "clean": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "component_replacement": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "interacting_change": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "missing_information": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "pin_reassignment": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        },
+        "requirement_revision": {
+          "count": 4,
+          "correct": 4,
+          "accuracy": 1.0
+        }
+      }
+    }
+  }
+}

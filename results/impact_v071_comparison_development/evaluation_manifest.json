@@ -1,0 +1,33 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-COMPARISON-0.7.1",
+  "benchmark_id": "AEROELECBENCH-IMPACT-DEVELOPMENT-0.7",
+  "benchmark_sha256": "e57f17e177ddca15522cccd7428bc8961d34d6fe18d449a789e6be764a7cb7de",
+  "model": "qwen2.5:7b",
+  "modes": [
+    "llm_only",
+    "text_rag",
+    "graph_deterministic",
+    "assurance_agent"
+  ],
+  "profile": "development",
+  "scenario_count": 24,
+  "seed": 7107,
+  "temperature": 0,
+  "max_tokens": 2500,
+  "retrieval_top_k": 12,
+  "oracle_exposed_to_model": false,
+  "root_node_ids_exposed_to_model": false,
+  "pipeline_version": "0.7.1",
+  "metric_generation": "deterministic",
+  "text_retrieval_method": "paired_entity_iterative_lexical_link_expansion_v01",
+  "model_output_contract": "affected_nodes_plus_evidence_edges",
+  "path_reconstruction": "model_edges_only",
+  "agent_policy": "bounded_ordered_tool_plan_v01",
+  "agent_model_role": "ordered_tool_plan_selection_only",
+  "agent_impact_result_source": "validated_deterministic_tool_execution",
+  "development_only": true,
+  "heldout": false,
+  "posthoc_tuning_allowed": true,
+  "production_modifications_allowed": false,
+  "narrative_output": false
+}
