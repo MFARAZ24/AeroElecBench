@@ -19,6 +19,8 @@ from .impact_evaluation import DEFAULT_OUTPUT as IMPACT_OUTPUT
 from .impact_evaluation import DEFAULT_SEED as IMPACT_SEED
 from .impact_evaluation import prepare_impact_development, run_impact_development
 from .impact_agent import IMPACT_MODES
+from .impact_assurance_v2 import DEFAULT_OUTPUT as ASSURANCE_V2_OUTPUT
+from .impact_assurance_v2 import run_assurance_v2
 from .impact_comparison import DEFAULT_COMPARISON_OUTPUT, run_impact_comparison
 from .impact_heldout import DEFAULT_BENCHMARK as IMPACT_HELDOUT_BENCHMARK
 from .impact_heldout import DEFAULT_OUTPUT as IMPACT_HELDOUT_OUTPUT
@@ -132,6 +134,16 @@ def _parser() -> argparse.ArgumentParser:
     impact_heldout.add_argument("--retrieval-top-k", type=int, default=12)
     impact_heldout.add_argument("--cases-per-type", type=int, default=5)
     impact_heldout.add_argument("--prepare-only", action="store_true")
+    assurance_v2 = subparsers.add_parser("impact-assurance-v2", help="Run the resumable v0.9 tool-observing assurance-agent development experiment")
+    assurance_v2.add_argument("--model", default="qwen2.5:7b")
+    assurance_v2.add_argument("--benchmark", type=Path, default=IMPACT_BENCHMARK)
+    assurance_v2.add_argument("--output-dir", type=Path, default=ASSURANCE_V2_OUTPUT)
+    assurance_v2.add_argument("--catalog", type=Path, default=None)
+    assurance_v2.add_argument("--base-url", default="http://localhost:11434")
+    assurance_v2.add_argument("--timeout", type=float, default=900.0)
+    assurance_v2.add_argument("--seed", type=int, default=9107)
+    assurance_v2.add_argument("--max-tokens", type=int, default=2500)
+    assurance_v2.add_argument("--profile", choices=("smoke", "development"), default="smoke")
     return parser
 
 
@@ -227,6 +239,16 @@ def main() -> None:
                 "modes": list(metrics["modes"]), "profile": "heldout", "results": str(args.output_dir),
             }
         print(json.dumps(result, indent=2))
+        return
+    if args.command == "impact-assurance-v2":
+        metrics = run_assurance_v2(
+            args.model, args.benchmark, args.output_dir, args.catalog, args.base_url,
+            args.timeout, args.seed, args.max_tokens, args.profile,
+        )
+        print(json.dumps({
+            "status": "complete", "scenario_count": metrics["scenario_count"], "model": args.model,
+            "profile": args.profile, "stages": list(metrics["stages"]), "results": str(args.output_dir),
+        }, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():
