@@ -1,0 +1,33 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-EVALUATION-0.8",
+  "benchmark_id": "AEROELECBENCH-IMPACT-HELDOUT-0.8",
+  "benchmark_sha256": "4ca39c9c154c04fb4783c4b346e06ae9936eb6bca349af5e4c7e7a643b96c258",
+  "model": "qwen2.5:7b",
+  "modes": [
+    "llm_only",
+    "text_rag",
+    "graph_deterministic",
+    "assurance_agent"
+  ],
+  "profile": "heldout",
+  "scenario_count": 30,
+  "seed": 8107,
+  "temperature": 0,
+  "max_tokens": 2500,
+  "retrieval_top_k": 12,
+  "oracle_exposed_to_model": false,
+  "root_node_ids_exposed_to_model": false,
+  "pipeline_version": "0.7.1",
+  "metric_generation": "deterministic",
+  "text_retrieval_method": "paired_entity_iterative_lexical_link_expansion_v01",
+  "model_output_contract": "affected_nodes_plus_evidence_edges",
+  "path_reconstruction": "model_edges_only",
+  "agent_policy": "bounded_ordered_tool_plan_v01",
+  "agent_model_role": "ordered_tool_plan_selection_only",
+  "agent_impact_result_source": "validated_deterministic_tool_execution",
+  "development_only": false,
+  "heldout": true,
+  "posthoc_tuning_allowed": false,
+  "production_modifications_allowed": false,
+  "narrative_output": false
+}
