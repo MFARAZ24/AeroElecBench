@@ -39,13 +39,13 @@ def _observed_diff_operations(scenario: dict[str, Any]) -> set[tuple[str, str]]:
     return {(item["op"], item["path"]) for item in compute_version_diff(scenario["before_design"], scenario["after_design"])}
 
 
-def validate_impact_benchmark(scenarios: list[dict[str, Any]], rules: list[dict[str, Any]]) -> None:
+def validate_impact_benchmark(scenarios: list[dict[str, Any]], rules: list[dict[str, Any]], expected_split: str = "development") -> None:
     if len({item["scenario_id"] for item in scenarios}) != len(scenarios):
         raise ValueError("Impact scenario identifiers must be unique")
     for scenario in scenarios:
         scenario_id, case_type = scenario["scenario_id"], scenario["impact_case_type"]
-        if case_type not in IMPACT_CASE_TYPES or scenario.get("split") != "development":
-            raise ValueError(f"Invalid development scenario metadata in {scenario_id}")
+        if case_type not in IMPACT_CASE_TYPES or scenario.get("split") != expected_split:
+            raise ValueError(f"Invalid {expected_split} scenario metadata in {scenario_id}")
         if validate_design(scenario["before_design"], rules):
             raise ValueError(f"Before design is invalid in {scenario_id}")
         if case_type != "missing_information" and validate_design(scenario["after_design"], rules):
@@ -99,16 +99,20 @@ def prepare_impact_development(
     return scenarios, manifest
 
 
-def _load_frozen_development(benchmark_path: str | Path, catalog_path: str | Path | None) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+def load_frozen_impact_benchmark(benchmark_path: str | Path, catalog_path: str | Path | None, expected_benchmark_id: str, expected_split: str) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     benchmark, manifest_path = Path(benchmark_path), Path(benchmark_path).with_name("manifest.json")
     if not benchmark.exists() or not manifest_path.exists():
-        raise FileNotFoundError(f"Development benchmark not found at {benchmark}. Run 'aeroecad impact-prototype --prepare-only' first.")
+        raise FileNotFoundError(f"{expected_split.title()} benchmark not found at {benchmark}.")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("benchmark_id") != BENCHMARK_ID or _sha256(benchmark) != manifest.get("benchmark_sha256"):
-        raise ValueError("Development benchmark identity or hash mismatch")
+    if manifest.get("benchmark_id") != expected_benchmark_id or _sha256(benchmark) != manifest.get("benchmark_sha256"):
+        raise ValueError(f"{expected_split.title()} benchmark identity or hash mismatch")
     scenarios, catalog = read_impact_benchmark(benchmark), load_catalog(catalog_path)
-    validate_impact_benchmark(scenarios, catalog["rules"])
+    validate_impact_benchmark(scenarios, catalog["rules"], expected_split)
     return scenarios, manifest, catalog
+
+
+def _load_frozen_development(benchmark_path: str | Path, catalog_path: str | Path | None) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
+    return load_frozen_impact_benchmark(benchmark_path, catalog_path, BENCHMARK_ID, "development")
 
 
 def evaluate_impact_records(scenarios: list[dict[str, Any]], records: list[dict[str, Any]]) -> dict[str, Any]:

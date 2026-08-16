@@ -82,7 +82,7 @@ def test_impact_parser_reconstructs_paths_only_from_model_edges() -> None:
     assert report["impact_paths"] == oracle["impact_paths"]
 
 
-def test_comparison_is_resumable_and_writes_only_data_outputs() -> None:
+def test_comparison_is_resumable_and_writes_only_data_outputs(capsys) -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
         benchmark, output = root / "benchmark" / "impact.jsonl", root / "comparison"
@@ -90,8 +90,10 @@ def test_comparison_is_resumable_and_writes_only_data_outputs() -> None:
         client = FakeImpactClient()
         modes = ("llm_only", "text_rag", "graph_deterministic", "assurance_agent")
         metrics = run_impact_comparison(modes=modes, benchmark_path=benchmark, output_dir=output, profile="smoke", client=client)
+        progress = capsys.readouterr().out
         first_call_count = client.calls
         assert metrics["scenario_count"] == 6 and first_call_count == 16
+        assert "Qwen calls: 0/16 complete" in progress and "Qwen remaining=0" in progress
         assert metrics["modes"]["graph_deterministic"]["oracle_action_accuracy"] == 1.0
         assert metrics["modes"]["assurance_agent"]["oracle_action_accuracy"] == 1.0
         assert metrics["modes"]["assurance_agent"]["llm_call_count"] == 4

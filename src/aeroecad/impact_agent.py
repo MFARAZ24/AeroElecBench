@@ -264,6 +264,17 @@ def _parse_plan(content: str) -> tuple[dict[str, Any] | None, str]:
     return payload, ""
 
 
+def impact_llm_call_required(scenario: dict[str, Any], mode: str) -> bool:
+    if mode in {"llm_only", "text_rag"}:
+        return True
+    if mode != "assurance_agent":
+        return False
+    request = scenario["change_request"]
+    graph = build_version_graph(scenario["before_design"], scenario["after_design"])
+    missing = set(graph["missing_paths"] + list(request.get("missing_evidence", [])))
+    return bool(request.get("evidence_complete", True) and not missing and compute_version_diff(scenario["before_design"], scenario["after_design"]))
+
+
 class ImpactAgent:
     def __init__(self, client: OllamaClient):
         self.client = client
@@ -304,9 +315,7 @@ class ImpactAgent:
 
     def _run_assurance(self, scenario: dict[str, Any], model: str, seed: int, max_tokens: int) -> dict[str, Any]:
         request = scenario["change_request"]
-        graph = build_version_graph(scenario["before_design"], scenario["after_design"])
-        missing = sorted(set(graph["missing_paths"] + list(request.get("missing_evidence", []))))
-        if not request.get("evidence_complete", True) or missing or not compute_version_diff(scenario["before_design"], scenario["after_design"]):
+        if not impact_llm_call_required(scenario, "assurance_agent"):
             report = analyze_change_impact(scenario["before_design"], scenario["after_design"], request)
             return {"report": report, "llm_call_count": 0, "prompt_sha256": "", "raw_content": "", "ollama_metadata": {}, "retrieved_chunk_ids": [], "retrieved_entity_ids": [], "diagnostics": _diagnostics(True), "plan": None}
         prompt = json.dumps({

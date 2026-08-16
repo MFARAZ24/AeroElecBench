@@ -125,7 +125,7 @@ def _operation(op: str, path: str, before: Any, after: Any) -> dict[str, Any]:
     return {"op": op, "path": path, "before": copy.deepcopy(before), "after": copy.deepcopy(after)}
 
 
-def generate_impact_benchmark(seed: int = 7107, cases_per_type: int = 4) -> list[dict[str, Any]]:
+def generate_impact_benchmark(seed: int = 7107, cases_per_type: int = 4, version: str = "v07", split: str = "development") -> list[dict[str, Any]]:
     total = len(IMPACT_CASE_TYPES) * cases_per_type
     bases = generate_benchmark(seed=seed, cases_per_rule=0, clean_cases=total, mixed_cases=0)
     scenarios: list[dict[str, Any]] = []
@@ -135,7 +135,7 @@ def generate_impact_benchmark(seed: int = 7107, cases_per_type: int = 4) -> list
             before = _with_verification_activities(bases[base_index]["design"])
             after = copy.deepcopy(before)
             base_index += 1
-            scenario_id, change_id = f"v07-impact-{case_type}-{case_index:03d}", f"CHG-{base_index:04d}"
+            scenario_id, change_id = f"{version}-impact-{case_type}-{case_index:03d}", f"CHG-{base_index:04d}"
 
             if case_type == "clean":
                 request = _change(change_id, "no_change", [], [], 0)
@@ -200,7 +200,7 @@ def generate_impact_benchmark(seed: int = 7107, cases_per_type: int = 4) -> list
                 affected, paths = [], []
             scenarios.append({
                 "scenario_id": scenario_id, "category": "change_impact", "impact_case_type": case_type,
-                "split": "development", "before_design": before, "after_design": after,
+                "split": split, "before_design": before, "after_design": after,
                 "change_request": request,
                 "impact_oracle": {
                     "version": "0.1", "expected_action": expected_action,

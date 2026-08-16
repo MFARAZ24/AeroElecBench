@@ -20,6 +20,10 @@ from .impact_evaluation import DEFAULT_SEED as IMPACT_SEED
 from .impact_evaluation import prepare_impact_development, run_impact_development
 from .impact_agent import IMPACT_MODES
 from .impact_comparison import DEFAULT_COMPARISON_OUTPUT, run_impact_comparison
+from .impact_heldout import DEFAULT_BENCHMARK as IMPACT_HELDOUT_BENCHMARK
+from .impact_heldout import DEFAULT_OUTPUT as IMPACT_HELDOUT_OUTPUT
+from .impact_heldout import DEFAULT_SEED as IMPACT_HELDOUT_SEED
+from .impact_heldout import prepare_impact_heldout, run_impact_heldout
 from .llm_evaluation import run_llm_experiment
 from .llm_review import LLM_MODES
 from .ollama import OllamaClient
@@ -114,6 +118,20 @@ def _parser() -> argparse.ArgumentParser:
     comparison.add_argument("--max-tokens", type=int, default=2500)
     comparison.add_argument("--retrieval-top-k", type=int, default=12)
     comparison.add_argument("--profile", choices=("smoke", "development"), default="development")
+    impact_heldout = subparsers.add_parser("impact-heldout", help="Prepare or run the frozen v0.8 change-impact evaluation")
+    impact_heldout.add_argument("--model", default="qwen2.5:7b")
+    impact_heldout.add_argument("--modes", nargs="+", choices=IMPACT_MODES, default=list(IMPACT_MODES))
+    impact_heldout.add_argument("--benchmark", type=Path, default=IMPACT_HELDOUT_BENCHMARK)
+    impact_heldout.add_argument("--output-dir", type=Path, default=IMPACT_HELDOUT_OUTPUT)
+    impact_heldout.add_argument("--catalog", type=Path, default=None)
+    impact_heldout.add_argument("--source-registry", type=Path, default=Path("data/source_registry.json"))
+    impact_heldout.add_argument("--base-url", default="http://localhost:11434")
+    impact_heldout.add_argument("--timeout", type=float, default=900.0)
+    impact_heldout.add_argument("--seed", type=int, default=IMPACT_HELDOUT_SEED)
+    impact_heldout.add_argument("--max-tokens", type=int, default=2500)
+    impact_heldout.add_argument("--retrieval-top-k", type=int, default=12)
+    impact_heldout.add_argument("--cases-per-type", type=int, default=5)
+    impact_heldout.add_argument("--prepare-only", action="store_true")
     return parser
 
 
@@ -189,6 +207,26 @@ def main() -> None:
             "status": "complete", "scenario_count": metrics["scenario_count"], "model": args.model,
             "modes": list(metrics["modes"]), "profile": args.profile, "results": str(args.output_dir),
         }, indent=2))
+        return
+    if args.command == "impact-heldout":
+        if args.prepare_only:
+            scenarios, manifest = prepare_impact_heldout(
+                args.benchmark, args.catalog, args.source_registry, args.seed, args.cases_per_type,
+            )
+            result = {
+                "status": "prepared", "scenario_count": len(scenarios), "benchmark": str(args.benchmark),
+                "benchmark_sha256": manifest["benchmark_sha256"], "split": "heldout",
+            }
+        else:
+            metrics = run_impact_heldout(
+                args.model, tuple(args.modes), args.benchmark, args.output_dir, args.catalog,
+                args.base_url, args.timeout, args.seed, args.max_tokens, args.retrieval_top_k,
+            )
+            result = {
+                "status": "complete", "scenario_count": metrics["scenario_count"], "model": args.model,
+                "modes": list(metrics["modes"]), "profile": "heldout", "results": str(args.output_dir),
+            }
+        print(json.dumps(result, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():
