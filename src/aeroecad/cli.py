@@ -7,30 +7,34 @@ from collections import Counter
 from pathlib import Path
 
 from .catalog import load_catalog
-from .evaluation import evaluate, save_results
 from .e2e import run_e2e_prototype
+from .evaluation import evaluate, save_results
 from .generator import generate_benchmark, read_jsonl, write_jsonl
 from .heldout import DEFAULT_BENCHMARK as HELDOUT_BENCHMARK
 from .heldout import DEFAULT_OUTPUT as HELDOUT_OUTPUT
 from .heldout import DEFAULT_SEED as HELDOUT_SEED
 from .heldout import prepare_heldout_benchmark, run_heldout_evaluation
-from .impact_evaluation import DEFAULT_BENCHMARK as IMPACT_BENCHMARK
-from .impact_evaluation import DEFAULT_OUTPUT as IMPACT_OUTPUT
-from .impact_evaluation import DEFAULT_SEED as IMPACT_SEED
-from .impact_evaluation import prepare_impact_development, run_impact_development
 from .impact_agent import IMPACT_MODES
 from .impact_assurance_v2 import DEFAULT_OUTPUT as ASSURANCE_V2_OUTPUT
 from .impact_assurance_v2 import run_assurance_v2
 from .impact_comparison import DEFAULT_COMPARISON_OUTPUT, run_impact_comparison
+from .impact_evaluation import DEFAULT_BENCHMARK as IMPACT_BENCHMARK
+from .impact_evaluation import DEFAULT_OUTPUT as IMPACT_OUTPUT
+from .impact_evaluation import DEFAULT_SEED as IMPACT_SEED
+from .impact_evaluation import prepare_impact_development, run_impact_development
 from .impact_heldout import DEFAULT_BENCHMARK as IMPACT_HELDOUT_BENCHMARK
 from .impact_heldout import DEFAULT_OUTPUT as IMPACT_HELDOUT_OUTPUT
 from .impact_heldout import DEFAULT_SEED as IMPACT_HELDOUT_SEED
 from .impact_heldout import prepare_impact_heldout, run_impact_heldout
+from .impact_intent import DEFAULT_BENCHMARK as INTENT_BENCHMARK
+from .impact_intent import DEFAULT_OUTPUT as INTENT_OUTPUT
+from .impact_intent import DEFAULT_SEED as INTENT_SEED
+from .impact_intent import prepare_intent_development, run_intent_baselines
 from .llm_evaluation import run_llm_experiment
+from .llm_repair import REPAIR_MODES
 from .llm_review import LLM_MODES
 from .ollama import OllamaClient
 from .repair_evaluation import run_repair_experiment
-from .llm_repair import REPAIR_MODES
 
 DEFAULT_MODELS = ["qwen2.5:7b", "llama3.1:8b", "mistral:7b"]
 
@@ -144,6 +148,14 @@ def _parser() -> argparse.ArgumentParser:
     assurance_v2.add_argument("--seed", type=int, default=9107)
     assurance_v2.add_argument("--max-tokens", type=int, default=2500)
     assurance_v2.add_argument("--profile", choices=("smoke", "development"), default="smoke")
+    intent = subparsers.add_parser("impact-intent", help="Prepare or run the deterministic v1.0 intent-grounding controls")
+    intent.add_argument("--benchmark", type=Path, default=INTENT_BENCHMARK)
+    intent.add_argument("--output-dir", type=Path, default=INTENT_OUTPUT)
+    intent.add_argument("--catalog", type=Path, default=None)
+    intent.add_argument("--source-registry", type=Path, default=Path("data/source_registry.json"))
+    intent.add_argument("--seed", type=int, default=INTENT_SEED)
+    intent.add_argument("--cases-per-type", type=int, default=4)
+    intent.add_argument("--prepare-only", action="store_true")
     return parser
 
 
@@ -249,6 +261,15 @@ def main() -> None:
             "status": "complete", "scenario_count": metrics["scenario_count"], "model": args.model,
             "profile": args.profile, "stages": list(metrics["stages"]), "results": str(args.output_dir),
         }, indent=2))
+        return
+    if args.command == "impact-intent":
+        if args.prepare_only:
+            scenarios, manifest = prepare_intent_development(args.benchmark, args.catalog, args.source_registry, args.seed, args.cases_per_type)
+            result = {"status": "prepared", "scenario_count": len(scenarios), "benchmark": str(args.benchmark), "benchmark_sha256": manifest["benchmark_sha256"], "split": "development", "llm_calls": 0}
+        else:
+            metrics = run_intent_baselines(args.benchmark, args.output_dir, args.catalog)
+            result = {"status": "complete", "scenario_count": metrics["scenario_count"], "modes": list(metrics["modes"]), "results": str(args.output_dir), "llm_calls": 0}
+        print(json.dumps(result, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():

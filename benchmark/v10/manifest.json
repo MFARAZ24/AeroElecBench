@@ -1,0 +1,40 @@
+{
+  "benchmark_id": "AEROELECBENCH-IMPACT-INTENT-DEVELOPMENT-1.0",
+  "benchmark": "impact_intent_development_24.jsonl",
+  "benchmark_sha256": "c72cf5a4fe6d060b1255f275e73f648af679e876509025901ad586ebd062065d",
+  "catalog_id": "AEROECAD-SYNTH-RULES-0.1",
+  "catalog_version": "0.1.0",
+  "catalog_sha256": "056a8a2c128d2af66c8ca884fb946821dfca3b5c5a270ae076304b0b0ae4a11a",
+  "source_registry_id": "AEROELECBENCH-SOURCES-0.1",
+  "source_registry_sha256": "aa4496ef1cc7716301597d787c8a5e493f1c7eab926a64c7a252d091cff410e1",
+  "seed": 10107,
+  "scenario_count": 24,
+  "case_type_counts": {
+    "ambiguous_request": 4,
+    "multi_intent": 4,
+    "same_entity_distractor": 4,
+    "single_explicit": 4,
+    "single_paraphrased": 4,
+    "unmatched_request": 4
+  },
+  "split_counts": {
+    "development": 24
+  },
+  "minimum_concurrent_semantic_changes": 4,
+  "oracle_validation_rate": 1.0,
+  "before_after_exposed_to_model": true,
+  "natural_language_request_exposed_to_model": true,
+  "change_inventory_exposed_to_model": true,
+  "intent_oracle_exposed_to_model": false,
+  "impact_oracle_exposed_to_model": false,
+  "resolved_candidate_root_ids_exposed_to_model": false,
+  "semantic_diff_excludes_paths": [
+    "revision"
+  ],
+  "development_only": true,
+  "heldout": false,
+  "posthoc_tuning_allowed": true,
+  "dataset_kind": "fictional_synthetic",
+  "production_modifications_allowed": false,
+  "narrative_output": false
+}
