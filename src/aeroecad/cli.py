@@ -30,6 +30,8 @@ from .impact_intent import DEFAULT_BENCHMARK as INTENT_BENCHMARK
 from .impact_intent import DEFAULT_OUTPUT as INTENT_OUTPUT
 from .impact_intent import DEFAULT_SEED as INTENT_SEED
 from .impact_intent import prepare_intent_development, run_intent_baselines
+from .impact_intent_llm import DEFAULT_OUTPUT as INTENT_QWEN_OUTPUT
+from .impact_intent_llm import run_intent_qwen
 from .llm_evaluation import run_llm_experiment
 from .llm_repair import REPAIR_MODES
 from .llm_review import LLM_MODES
@@ -156,6 +158,16 @@ def _parser() -> argparse.ArgumentParser:
     intent.add_argument("--seed", type=int, default=INTENT_SEED)
     intent.add_argument("--cases-per-type", type=int, default=4)
     intent.add_argument("--prepare-only", action="store_true")
+    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the resumable v1.1 Qwen intent-grounding experiment")
+    intent_qwen.add_argument("--model", default="qwen2.5:7b")
+    intent_qwen.add_argument("--benchmark", type=Path, default=INTENT_BENCHMARK)
+    intent_qwen.add_argument("--output-dir", type=Path, default=INTENT_QWEN_OUTPUT)
+    intent_qwen.add_argument("--catalog", type=Path, default=None)
+    intent_qwen.add_argument("--base-url", default="http://localhost:11434")
+    intent_qwen.add_argument("--timeout", type=float, default=900.0)
+    intent_qwen.add_argument("--seed", type=int, default=11107)
+    intent_qwen.add_argument("--max-tokens", type=int, default=500)
+    intent_qwen.add_argument("--profile", choices=("smoke", "development"), default="smoke")
     return parser
 
 
@@ -270,6 +282,14 @@ def main() -> None:
             metrics = run_intent_baselines(args.benchmark, args.output_dir, args.catalog)
             result = {"status": "complete", "scenario_count": metrics["scenario_count"], "modes": list(metrics["modes"]), "results": str(args.output_dir), "llm_calls": 0}
         print(json.dumps(result, indent=2))
+        return
+    if args.command == "impact-intent-qwen":
+        metrics = run_intent_qwen(args.model, args.benchmark, args.output_dir, args.catalog, args.base_url, args.timeout, args.seed, args.max_tokens, args.profile)
+        print(json.dumps({
+            "status": "complete", "scenario_count": metrics["scenario_count"], "model": args.model,
+            "mode": "qwen_intent_graph", "profile": args.profile, "results": str(args.output_dir),
+            "llm_calls": metrics["modes"]["qwen_intent_graph"]["llm_call_count"],
+        }, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():

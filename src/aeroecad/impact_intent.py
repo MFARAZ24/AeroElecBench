@@ -267,17 +267,24 @@ def _prf(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
     return precision, recall, _ratio(2 * precision * recall, precision + recall)
 
 
-def _evaluate_mode(mode: str, scenarios: list[dict[str, Any]]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def evaluate_intent_predictions(
+    scenarios: list[dict[str, Any]], predictions: dict[str, dict[str, Any]], mode: str,
+    llm_call_count: int = 0, rejected_output_count: int = 0,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    missing = [scenario["scenario_id"] for scenario in scenarios if scenario["scenario_id"] not in predictions]
+    if missing:
+        raise ValueError(f"Missing intent predictions for: {', '.join(missing)}")
     candidate_tp = candidate_fp = candidate_fn = rejected_distractors = total_distractors = 0
     root_tp = root_fp = root_fn = impact_tp = impact_fp = impact_fn = path_tp = path_fp = path_fn = 0
     candidate_exact = root_exact = impact_exact = action_correct = 0
     rows = []
     for scenario in scenarios:
-        predicted_ids = _selection_for(mode, scenario)
+        prediction = predictions[scenario["scenario_id"]]
+        predicted_ids = list(prediction["selected_candidate_ids"])
         expected_ids = scenario["intent_oracle"]["intended_candidate_ids"]
         predicted_roots = resolve_candidate_roots(scenario["before_design"], scenario["after_design"], scenario["change_inventory"], predicted_ids)
         expected_roots = scenario["intent_oracle"]["root_node_ids"]
-        predicted_action = "report" if predicted_ids else "abstain"
+        predicted_action = prediction["action"]
         if predicted_ids:
             graph = build_version_graph(scenario["before_design"], scenario["after_design"])
             predicted_impact, predicted_paths = traverse_impact(graph, predicted_roots, scenario["engineering_change_request"]["max_depth"])
@@ -311,7 +318,7 @@ def _evaluate_mode(mode: str, scenarios: list[dict[str, Any]]) -> tuple[dict[str
     path_precision, path_recall, path_f1 = _prf(path_tp, path_fp, path_fn)
     count = len(scenarios)
     return {
-        "mode": mode, "scenario_count": count, "llm_call_count": 0,
+        "mode": mode, "scenario_count": count, "llm_call_count": llm_call_count, "rejected_output_count": rejected_output_count,
         "candidate_precision": candidate_precision, "candidate_recall": candidate_recall, "candidate_f1": candidate_f1,
         "candidate_exact_scenario_accuracy": candidate_exact / count, "distractor_rejection_rate": _ratio(rejected_distractors, total_distractors, 1.0),
         "root_precision": root_precision, "root_recall": root_recall, "root_f1": root_f1, "root_exact_scenario_accuracy": root_exact / count,
@@ -319,6 +326,17 @@ def _evaluate_mode(mode: str, scenarios: list[dict[str, Any]]) -> tuple[dict[str
         "path_precision": path_precision, "path_recall": path_recall, "path_f1": path_f1,
         "oracle_action_accuracy": action_correct / count, "production_modification_count": 0,
     }, rows
+
+
+def _evaluate_mode(mode: str, scenarios: list[dict[str, Any]]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    predictions = {
+        scenario["scenario_id"]: {
+            "action": "report" if (selected := _selection_for(mode, scenario)) else "abstain",
+            "selected_candidate_ids": selected,
+        }
+        for scenario in scenarios
+    }
+    return evaluate_intent_predictions(scenarios, predictions, mode)
 
 
 def run_intent_baselines(benchmark_path: str | Path = DEFAULT_BENCHMARK, output_dir: str | Path = DEFAULT_OUTPUT, catalog_path: str | Path | None = None) -> dict[str, Any]:
