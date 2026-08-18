@@ -1,0 +1,20 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-INTENT-BASELINES-1.0",
+  "benchmark_id": "AEROELECBENCH-IMPACT-INTENT-DEVELOPMENT-1.0",
+  "benchmark_sha256": "c72cf5a4fe6d060b1255f275e73f648af679e876509025901ad586ebd062065d",
+  "pipeline_version": "1.0.0",
+  "modes": [
+    "all_diff_graph",
+    "lexical_intent_graph",
+    "oracle_root_graph"
+  ],
+  "scenario_count": 24,
+  "llm_calls_performed": 0,
+  "intent_oracle_exposed_to_non_oracle_baselines": false,
+  "oracle_root_graph_role": "upper_bound",
+  "all_diff_graph_role": "intent_agnostic_control",
+  "lexical_intent_graph_role": "non_llm_intent_baseline",
+  "metric_generation": "deterministic",
+  "production_modifications_allowed": false,
+  "narrative_output": false
+}
