@@ -158,7 +158,7 @@ def _parser() -> argparse.ArgumentParser:
     intent.add_argument("--seed", type=int, default=INTENT_SEED)
     intent.add_argument("--cases-per-type", type=int, default=4)
     intent.add_argument("--prepare-only", action="store_true")
-    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the resumable v1.1 Qwen intent-grounding experiment")
+    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the resumable v1.2 Qwen intent-grounding experiment")
     intent_qwen.add_argument("--model", default="qwen2.5:7b")
     intent_qwen.add_argument("--benchmark", type=Path, default=INTENT_BENCHMARK)
     intent_qwen.add_argument("--output-dir", type=Path, default=INTENT_QWEN_OUTPUT)
@@ -166,7 +166,7 @@ def _parser() -> argparse.ArgumentParser:
     intent_qwen.add_argument("--base-url", default="http://localhost:11434")
     intent_qwen.add_argument("--timeout", type=float, default=900.0)
     intent_qwen.add_argument("--seed", type=int, default=11107)
-    intent_qwen.add_argument("--max-tokens", type=int, default=500)
+    intent_qwen.add_argument("--max-tokens", type=int, default=300)
     intent_qwen.add_argument("--profile", choices=("smoke", "development"), default="smoke")
     return parser
 

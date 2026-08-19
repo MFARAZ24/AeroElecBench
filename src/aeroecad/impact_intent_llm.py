@@ -12,11 +12,11 @@ from .impact_graph import build_version_graph, traverse_impact
 from .impact_intent import DEFAULT_BENCHMARK, evaluate_intent_predictions, load_frozen_intent_benchmark, resolve_candidate_roots
 from .ollama import OllamaClient
 
-DEFAULT_OUTPUT = Path("results/impact_v11_intent_qwen")
-EVALUATION_ID = "AEROELECBENCH-IMPACT-INTENT-QWEN-DEVELOPMENT-1.1"
-PIPELINE_VERSION = "1.1.0"
+DEFAULT_OUTPUT = Path("results/impact_v12_intent_qwen")
+EVALUATION_ID = "AEROELECBENCH-IMPACT-INTENT-QWEN-DEVELOPMENT-1.2"
+PIPELINE_VERSION = "1.2.0"
 MODE = "qwen_intent_graph"
-SYSTEM_PROMPT = """You ground an engineering change request to an observed before/after electrical-design revision. Select only change_inventory candidates explicitly intended by the request. Genuine but unrelated edits are distractors. Report when at least one candidate is unambiguously intended; otherwise abstain. Use only supplied candidate IDs. Do not perform graph propagation or invent roots, nodes, or changes. Return one JSON object only."""
+SYSTEM_PROMPT = """Perform intent-to-diff grounding for a fictional electrical-design revision. The engineering request is the sole authority for intended scope; the deterministic candidate inventory describes observed edits, not authorization. Evaluate every candidate independently by matching its change type, entity IDs, field, and before/after values to the request. Select every and only matching candidate. If at least one candidate matches, action must be report even when other candidates are distractors. Abstain only when zero candidates match because the request is ambiguous or names an entity/value absent from the inventory. Never select candidates merely because they are genuine edits. Distinguish wire IDs beginning W- from component IDs beginning LRU-. Use only supplied candidate IDs. Do not propagate the graph or invent roots. Return one JSON object only."""
 RESPONSE_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
@@ -42,16 +42,33 @@ def _select_scenarios(scenarios: list[dict[str, Any]], profile: str) -> list[dic
 
 
 def build_intent_prompt(scenario: dict[str, Any]) -> str:
+    inventory = [{
+        "candidate_id": candidate["candidate_id"], "change_type": candidate["change_type"],
+        "entity_ids": candidate["entity_ids"],
+        "changes": [{"field": item["path"], "before": item.get("before"), "after": item.get("after")} for item in candidate["operations"]],
+    } for candidate in scenario["change_inventory"]]
     payload = {
-        "task": "Select the observed change candidates intended by the engineering request, or abstain if the request is ambiguous or unmatched.",
-        "engineering_change_request": scenario["engineering_change_request"],
-        "before_design": scenario["before_design"], "after_design": scenario["after_design"],
-        "change_inventory": scenario["change_inventory"],
-        "decision_contract": {
-            "report": "Use when one or more supplied candidate IDs are clearly within requested scope.",
-            "abstain": "Use with an empty selected_candidate_ids list when the request is ambiguous or matches no observed candidate.",
-            "distractors": "Reject all genuine observed edits that are outside the request, including edits on the same entity.",
-        },
+        "task": "Map the request to the intended observed candidate IDs.",
+        "engineering_change_request": scenario["engineering_change_request"]["text"],
+        "candidate_inventory": inventory,
+        "decision_rules": [
+            "First identify candidates whose type, identifiers, and changed values match the request.",
+            "If one or more match, return report with exactly those IDs; unrelated candidates do not justify abstention.",
+            "If none match or the request cannot distinguish a candidate, return abstain with an empty list.",
+            "Explicit exclusions and the word only remove candidates from scope.",
+        ],
+        "generic_examples": [
+            {
+                "request": "Assess only replacement of UNIT-A with PART-NEW; ignore the wire edit.",
+                "candidates": ["X1 component replacement UNIT-A OLD to PART-NEW", "X2 wire gauge 22 to 20"],
+                "output": {"action": "report", "selected_candidate_ids": ["X1"], "rationale": "X1 exactly matches the requested unit and new part; X2 is excluded."},
+            },
+            {
+                "request": "Assess replacement of UNIT-NOT-PRESENT with PART-Z; no other edit is authorized.",
+                "candidates": ["X1 component replacement UNIT-A OLD to PART-NEW", "X2 wire gauge 22 to 20"],
+                "output": {"action": "abstain", "selected_candidate_ids": [], "rationale": "No observed candidate matches the requested unit or part."},
+            },
+        ],
     }
     return json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
 
@@ -135,7 +152,7 @@ def run_intent_qwen(
     model: str = "qwen2.5:7b", benchmark_path: str | Path = DEFAULT_BENCHMARK,
     output_dir: str | Path = DEFAULT_OUTPUT, catalog_path: str | Path | None = None,
     base_url: str = "http://localhost:11434", timeout: float = 900.0, seed: int = 11107,
-    max_tokens: int = 500, profile: str = "smoke", client: OllamaClient | None = None,
+    max_tokens: int = 300, profile: str = "smoke", client: OllamaClient | None = None,
 ) -> dict[str, Any]:
     scenarios, benchmark_manifest = load_frozen_intent_benchmark(benchmark_path, catalog_path)
     selected = _select_scenarios(scenarios, profile)
@@ -175,7 +192,12 @@ def run_intent_qwen(
         "evaluation_id": EVALUATION_ID, "benchmark_id": benchmark_manifest["benchmark_id"],
         "benchmark_sha256": benchmark_manifest["benchmark_sha256"], "model": model, "mode": MODE,
         "profile": profile, "scenario_count": len(selected), "seed": seed, "temperature": 0, "max_tokens": max_tokens,
-        "pipeline_version": PIPELINE_VERSION, "model_inputs": ["before_design", "after_design", "engineering_change_request", "change_inventory"],
+        "pipeline_version": PIPELINE_VERSION,
+        "pipeline_inputs": ["before_design", "after_design", "engineering_change_request"],
+        "model_inputs": ["engineering_change_request", "deterministic_change_inventory"],
+        "before_after_exposed_to_model": False,
+        "change_inventory_derivation": "deterministic_semantic_diff_from_before_after",
+        "comparison_input_parity_with_lexical_baseline": True, "generic_few_shot_example_count": 2,
         "intent_oracle_exposed_to_model": False, "impact_oracle_exposed_to_model": False,
         "resolved_candidate_root_ids_exposed_to_model": False, "oracle_usage": "offline_scoring_only",
         "model_role": "intent_conditioned_candidate_selection", "impact_result_source": "deterministic_graph_from_qwen_selected_candidates",

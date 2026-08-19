@@ -21,7 +21,7 @@ class FakeIntentClient:
         self.calls += 1
         payload = json.loads(user)
         self.prompts.append(payload)
-        request = payload["engineering_change_request"]["text"]
+        request = payload["engineering_change_request"]
         if "authorized replacement" in request:
             action, selected = "report", ["CAND-01"]
         elif "conductor resized" in request:
@@ -36,11 +36,13 @@ class FakeIntentClient:
         return OllamaResponse(content, {"eval_count": 12, "done_reason": "stop"})
 
 
-def test_intent_prompt_exposes_versions_and_inventory_but_hides_oracles() -> None:
+def test_intent_prompt_uses_inventory_parity_and_hides_versions_and_oracles() -> None:
     scenario = generate_intent_benchmark(seed=107, cases_per_type=1)[0]
     prompt = build_intent_prompt(scenario)
     payload = json.loads(prompt)
-    assert {"before_design", "after_design", "engineering_change_request", "change_inventory"} <= set(payload)
+    assert {"engineering_change_request", "candidate_inventory", "decision_rules", "generic_examples"} <= set(payload)
+    assert "before_design" not in payload and "after_design" not in payload
+    assert len(prompt) < 5000
     assert "intent_oracle" not in prompt and "impact_oracle" not in prompt and "root_node_ids" not in prompt
 
 
@@ -77,4 +79,5 @@ def test_qwen_intent_selection_controls_graph_and_resumes(capsys) -> None:
         manifest = json.loads((output / "evaluation_manifest.json").read_text(encoding="utf-8"))
         assert manifest["oracle_usage"] == "offline_scoring_only" and manifest["oracle_correction_performed"] is False
         assert manifest["impact_result_source"] == "deterministic_graph_from_qwen_selected_candidates"
+        assert manifest["before_after_exposed_to_model"] is False and manifest["comparison_input_parity_with_lexical_baseline"] is True
         assert not list(output.rglob("*.md"))
