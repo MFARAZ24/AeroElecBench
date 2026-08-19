@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 from aeroecad.impact_intent import generate_intent_benchmark, prepare_intent_development
-from aeroecad.impact_intent_llm import build_intent_prompt, parse_intent_response, run_intent_qwen
+from aeroecad.impact_intent_llm import PIPELINE_VERSION, SYSTEM_PROMPT, build_intent_prompt, parse_intent_response, run_intent_qwen
 from aeroecad.ollama import OllamaResponse
 
 
@@ -42,6 +42,9 @@ def test_intent_prompt_uses_inventory_parity_and_hides_versions_and_oracles() ->
     payload = json.loads(prompt)
     assert {"engineering_change_request", "candidate_inventory", "decision_rules", "generic_examples"} <= set(payload)
     assert "before_design" not in payload and "after_design" not in payload
+    assert len(payload["generic_examples"]) == 3
+    assert any(example["output"]["action"] == "abstain" and "distinguish" in example["output"]["rationale"] for example in payload["generic_examples"])
+    assert "conjoined" in SYSTEM_PROMPT and "component_replacement" in SYSTEM_PROMPT
     assert len(prompt) < 5000
     assert "intent_oracle" not in prompt and "impact_oracle" not in prompt and "root_node_ids" not in prompt
 
@@ -77,7 +80,9 @@ def test_qwen_intent_selection_controls_graph_and_resumes(capsys) -> None:
         assert len(records) == 12 and all(row["llm_call_count"] == 1 for row in records)
         assert all(row["graph_result"]["affected_node_ids"] for row in records if row["selection"]["action"] == "report")
         manifest = json.loads((output / "evaluation_manifest.json").read_text(encoding="utf-8"))
+        assert manifest["pipeline_version"] == PIPELINE_VERSION == "1.3.0"
         assert manifest["oracle_usage"] == "offline_scoring_only" and manifest["oracle_correction_performed"] is False
         assert manifest["impact_result_source"] == "deterministic_graph_from_qwen_selected_candidates"
         assert manifest["before_after_exposed_to_model"] is False and manifest["comparison_input_parity_with_lexical_baseline"] is True
+        assert manifest["generic_few_shot_example_count"] == 3 and "v1.2_development" in manifest["prompt_revision_basis"]
         assert not list(output.rglob("*.md"))

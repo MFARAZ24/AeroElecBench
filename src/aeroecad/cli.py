@@ -158,7 +158,7 @@ def _parser() -> argparse.ArgumentParser:
     intent.add_argument("--seed", type=int, default=INTENT_SEED)
     intent.add_argument("--cases-per-type", type=int, default=4)
     intent.add_argument("--prepare-only", action="store_true")
-    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the resumable v1.2 Qwen intent-grounding experiment")
+    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the resumable v1.3 Qwen intent-grounding experiment")
     intent_qwen.add_argument("--model", default="qwen2.5:7b")
     intent_qwen.add_argument("--benchmark", type=Path, default=INTENT_BENCHMARK)
     intent_qwen.add_argument("--output-dir", type=Path, default=INTENT_QWEN_OUTPUT)

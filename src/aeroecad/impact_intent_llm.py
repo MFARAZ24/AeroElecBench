@@ -12,11 +12,11 @@ from .impact_graph import build_version_graph, traverse_impact
 from .impact_intent import DEFAULT_BENCHMARK, evaluate_intent_predictions, load_frozen_intent_benchmark, resolve_candidate_roots
 from .ollama import OllamaClient
 
-DEFAULT_OUTPUT = Path("results/impact_v12_intent_qwen")
-EVALUATION_ID = "AEROELECBENCH-IMPACT-INTENT-QWEN-DEVELOPMENT-1.2"
-PIPELINE_VERSION = "1.2.0"
+DEFAULT_OUTPUT = Path("results/impact_v13_intent_qwen")
+EVALUATION_ID = "AEROELECBENCH-IMPACT-INTENT-QWEN-DEVELOPMENT-1.3"
+PIPELINE_VERSION = "1.3.0"
 MODE = "qwen_intent_graph"
-SYSTEM_PROMPT = """Perform intent-to-diff grounding for a fictional electrical-design revision. The engineering request is the sole authority for intended scope; the deterministic candidate inventory describes observed edits, not authorization. Evaluate every candidate independently by matching its change type, entity IDs, field, and before/after values to the request. Select every and only matching candidate. If at least one candidate matches, action must be report even when other candidates are distractors. Abstain only when zero candidates match because the request is ambiguous or names an entity/value absent from the inventory. Never select candidates merely because they are genuine edits. Distinguish wire IDs beginning W- from component IDs beginning LRU-. Use only supplied candidate IDs. Do not propagate the graph or invent roots. Return one JSON object only."""
+SYSTEM_PROMPT = """Perform intent-to-diff grounding for a fictional electrical-design revision. The engineering request is the sole authority for intended scope; the deterministic candidate inventory describes observed edits, not authorization. First test whether the request contains a concrete discriminator—change type or clear synonym, entity ID, field, or before/after value—that distinguishes a candidate. Approval words such as approved, authorized, update, change, and downstream consequences do not identify a candidate by themselves; abstain when no concrete discriminator distinguishes scope. Evaluate every requested clause and every candidate independently, selecting every and only matching candidate. A hardware, unit, or device update at a named LRU can identify that LRU's component_replacement, but does not authorize wire or pin changes unless separately requested. Preserve coordinated and conjoined scope: find a match for each requested change clause. If at least one candidate matches, action must be report even when other candidates are distractors. Abstain only when zero candidates match because the request is ambiguous or names an entity/value absent from the inventory. Never select candidates merely because they are genuine edits. Distinguish wire IDs beginning W- from component IDs beginning LRU-. Use only supplied candidate IDs. Do not propagate the graph or invent roots. Return one JSON object only."""
 RESPONSE_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
@@ -52,7 +52,10 @@ def build_intent_prompt(scenario: dict[str, Any]) -> str:
         "engineering_change_request": scenario["engineering_change_request"]["text"],
         "candidate_inventory": inventory,
         "decision_rules": [
-            "First identify candidates whose type, identifiers, and changed values match the request.",
+            "Reject scope inference from generic approval or impact language unless a type/synonym, entity, field, or value distinguishes a candidate.",
+            "Map hardware, unit, or device update at a named component to its component_replacement; this does not authorize wire or pin edits.",
+            "Split coordinated or conjoined requests into clauses and find the matching candidate for every requested clause.",
+            "Identify candidates whose type, identifiers, and changed values match the request.",
             "If one or more match, return report with exactly those IDs; unrelated candidates do not justify abstention.",
             "If none match or the request cannot distinguish a candidate, return abstain with an empty list.",
             "Explicit exclusions and the word only remove candidates from scope.",
@@ -62,6 +65,11 @@ def build_intent_prompt(scenario: dict[str, Any]) -> str:
                 "request": "Assess only replacement of UNIT-A with PART-NEW; ignore the wire edit.",
                 "candidates": ["X1 component replacement UNIT-A OLD to PART-NEW", "X2 wire gauge 22 to 20"],
                 "output": {"action": "report", "selected_candidate_ids": ["X1"], "rationale": "X1 exactly matches the requested unit and new part; X2 is excluded."},
+            },
+            {
+                "request": "Assess the authorized design change and its effects.",
+                "candidates": ["X1 component replacement UNIT-A OLD to PART-NEW", "X2 wire gauge 22 to 20"],
+                "output": {"action": "abstain", "selected_candidate_ids": [], "rationale": "Generic authorization and effects language does not distinguish X1 from X2."},
             },
             {
                 "request": "Assess replacement of UNIT-NOT-PRESENT with PART-Z; no other edit is authorized.",
@@ -197,7 +205,8 @@ def run_intent_qwen(
         "model_inputs": ["engineering_change_request", "deterministic_change_inventory"],
         "before_after_exposed_to_model": False,
         "change_inventory_derivation": "deterministic_semantic_diff_from_before_after",
-        "comparison_input_parity_with_lexical_baseline": True, "generic_few_shot_example_count": 2,
+        "comparison_input_parity_with_lexical_baseline": True, "generic_few_shot_example_count": 3,
+        "prompt_revision_basis": "v1.2_development_ambiguity_and_multi_clause_failure_analysis",
         "intent_oracle_exposed_to_model": False, "impact_oracle_exposed_to_model": False,
         "resolved_candidate_root_ids_exposed_to_model": False, "oracle_usage": "offline_scoring_only",
         "model_role": "intent_conditioned_candidate_selection", "impact_result_source": "deterministic_graph_from_qwen_selected_candidates",
