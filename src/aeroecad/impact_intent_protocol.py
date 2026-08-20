@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .impact_graph import build_version_graph, traverse_impact
+from .impact_intent import BENCHMARK_ID as DEVELOPMENT_BENCHMARK_ID
 from .impact_intent import DEFAULT_BENCHMARK, evaluate_intent_predictions, load_frozen_intent_benchmark, resolve_candidate_roots
 from .impact_intent_llm import MODE, PIPELINE_VERSION as PROMPT_VERSION, RESPONSE_SCHEMA, SYSTEM_PROMPT, build_intent_prompt, parse_intent_response
 from .ollama import OllamaClient
@@ -72,7 +73,18 @@ def prepare_oracle_separated_package(
     benchmark_path: str | Path = DEFAULT_BENCHMARK, package_dir: str | Path = DEFAULT_PACKAGE,
     catalog_path: str | Path | None = None,
 ) -> dict[str, Any]:
-    scenarios, benchmark_manifest = load_frozen_intent_benchmark(benchmark_path, catalog_path)
+    manifest_path = Path(benchmark_path).with_name("manifest.json")
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Benchmark manifest not found: {manifest_path}")
+    benchmark_id = json.loads(manifest_path.read_text(encoding="utf-8")).get("benchmark_id")
+    if benchmark_id == DEVELOPMENT_BENCHMARK_ID:
+        scenarios, benchmark_manifest = load_frozen_intent_benchmark(benchmark_path, catalog_path)
+    else:
+        from .impact_intent_heldout_v15 import BENCHMARK_ID as HELDOUT_BENCHMARK_ID
+        from .impact_intent_heldout_v15 import load_frozen_intent_heldout
+        if benchmark_id != HELDOUT_BENCHMARK_ID:
+            raise ValueError(f"Unsupported intent benchmark id: {benchmark_id}")
+        scenarios, benchmark_manifest = load_frozen_intent_heldout(benchmark_path, catalog_path)
     source_hash = benchmark_manifest["benchmark_sha256"]
     scenarios = sorted(scenarios, key=lambda item: hashlib.sha256(f"{source_hash}:{item['scenario_id']}".encode()).hexdigest())
     inputs, oracles = [], []
@@ -101,6 +113,8 @@ def prepare_oracle_separated_package(
         "model_input_top_level_fields": sorted(REQUIRED_INPUT_KEYS), "forbidden_model_input_fields": sorted(FORBIDDEN_INPUT_KEYS),
         "oracle_fields_present_in_model_input": False, "case_type_present_in_model_input": False,
         "opaque_scenario_ids": True, "source_scenario_ids_present_in_model_input": False, "case_order_blinded": True,
+        "frozen_prompt_version": PROMPT_VERSION, "system_prompt_sha256": hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest(),
+        "posthoc_tuning_allowed": benchmark_manifest.get("posthoc_tuning_allowed", False),
         "prediction_and_scoring_commands_separate": True, "production_modifications_allowed": False,
     }
     (package / PACKAGE_MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

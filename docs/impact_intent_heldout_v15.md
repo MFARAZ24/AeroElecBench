@@ -1,0 +1,9 @@
+# Frozen intent-grounding held-out benchmark v1.5
+
+The v1.3 prompt is frozen before this benchmark is generated or evaluated. Version 1.5 contains 30 fictional scenarios: five each for explicit single intent, paraphrased single intent, multi-intent scope, same-entity distractors, ambiguous requests, and requests with no observed match. Every scenario contains four genuine concurrent semantic changes.
+
+Held-out requests use wording not present in the 24-case development benchmark. The 25 positive labels are balanced as closely as mathematically possible across component replacement, wire-gauge revision, requirement revision, and pin reassignment (`6/6/6/7`). Multi-intent scenarios use five different candidate pairs, and same-entity cases alternate between selecting the component replacement and selecting the pin reassignment. Ambiguous requests use multiple forms of non-specific authorization language; unmatched requests cover absent components, wires, requirements, and pin routes.
+
+The generator uses seed `15107`, independently recomputes and validates candidate roots, affected nodes, and typed paths, and refuses configurations other than five cases per type. Once written, the benchmark and manifest are immutable for the requested configuration and protected by SHA-256 hashes. The manifest records zero exact request overlap with development, prompt version `1.3.0`, held-out status, and `posthoc_tuning_allowed: false`.
+
+The same command immediately creates the v1.4 oracle-separated package. Prediction receives only shuffled opaque cases containing before/after designs, engineering request text and depth, and deterministic change inventory. It cannot read case types, source identifiers, intent or impact oracles, expected actions, roots, affected sets, or paths. Predictions must be completed and hash-frozen before the offline scoring command is used. Held-out results cannot be used to modify the prompt.

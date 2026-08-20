@@ -32,6 +32,11 @@ from .impact_intent import DEFAULT_SEED as INTENT_SEED
 from .impact_intent import prepare_intent_development, run_intent_baselines
 from .impact_intent_llm import DEFAULT_OUTPUT as INTENT_QWEN_OUTPUT
 from .impact_intent_llm import run_intent_qwen
+from .impact_intent_heldout_v15 import CASES_PER_TYPE as INTENT_HELDOUT_CASES_PER_TYPE
+from .impact_intent_heldout_v15 import DEFAULT_BENCHMARK as INTENT_HELDOUT_BENCHMARK
+from .impact_intent_heldout_v15 import DEFAULT_PACKAGE as INTENT_HELDOUT_PACKAGE
+from .impact_intent_heldout_v15 import DEFAULT_SEED as INTENT_HELDOUT_SEED
+from .impact_intent_heldout_v15 import prepare_intent_heldout
 from .impact_intent_protocol import DEFAULT_PACKAGE as INTENT_SEPARATED_PACKAGE
 from .impact_intent_protocol import DEFAULT_PREDICTIONS as INTENT_SEPARATED_PREDICTIONS
 from .impact_intent_protocol import DEFAULT_SCORES as INTENT_SEPARATED_SCORES
@@ -188,6 +193,13 @@ def _parser() -> argparse.ArgumentParser:
     intent_score.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
     intent_score.add_argument("--prediction-dir", type=Path, default=INTENT_SEPARATED_PREDICTIONS)
     intent_score.add_argument("--output-dir", type=Path, default=INTENT_SEPARATED_SCORES)
+    intent_heldout = subparsers.add_parser("impact-intent-heldout-prepare", help="Freeze the v1.5 held-out benchmark and oracle-separated input package without model calls")
+    intent_heldout.add_argument("--benchmark", type=Path, default=INTENT_HELDOUT_BENCHMARK)
+    intent_heldout.add_argument("--package-dir", type=Path, default=INTENT_HELDOUT_PACKAGE)
+    intent_heldout.add_argument("--catalog", type=Path, default=None)
+    intent_heldout.add_argument("--source-registry", type=Path, default=Path("data/source_registry.json"))
+    intent_heldout.add_argument("--seed", type=int, default=INTENT_HELDOUT_SEED)
+    intent_heldout.add_argument("--cases-per-type", type=int, default=INTENT_HELDOUT_CASES_PER_TYPE)
     return parser
 
 
@@ -322,6 +334,17 @@ def main() -> None:
     if args.command == "impact-intent-score":
         metrics = score_frozen_predictions(args.package_dir, args.prediction_dir, args.output_dir)
         print(json.dumps({"status": "complete", "scenario_count": metrics["scenario_count"], "model": metrics["model"], "results": str(args.output_dir), "scoring": "offline_oracle_only"}, indent=2))
+        return
+    if args.command == "impact-intent-heldout-prepare":
+        scenarios, benchmark_manifest = prepare_intent_heldout(args.benchmark, args.catalog, args.source_registry, args.seed, args.cases_per_type)
+        package_manifest = prepare_oracle_separated_package(args.benchmark, args.package_dir, args.catalog)
+        print(json.dumps({
+            "status": "frozen", "scenario_count": len(scenarios), "benchmark": str(args.benchmark),
+            "benchmark_sha256": benchmark_manifest["benchmark_sha256"], "package": str(args.package_dir),
+            "model_input_sha256": package_manifest["model_input_sha256"], "oracle_sha256": package_manifest["oracle_sha256"],
+            "prompt_version_frozen": benchmark_manifest["prompt_version_frozen"], "posthoc_tuning_allowed": False,
+            "llm_calls": 0,
+        }, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():
