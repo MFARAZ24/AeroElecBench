@@ -32,6 +32,10 @@ from .impact_intent import DEFAULT_SEED as INTENT_SEED
 from .impact_intent import prepare_intent_development, run_intent_baselines
 from .impact_intent_llm import DEFAULT_OUTPUT as INTENT_QWEN_OUTPUT
 from .impact_intent_llm import run_intent_qwen
+from .impact_intent_protocol import DEFAULT_PACKAGE as INTENT_SEPARATED_PACKAGE
+from .impact_intent_protocol import DEFAULT_PREDICTIONS as INTENT_SEPARATED_PREDICTIONS
+from .impact_intent_protocol import DEFAULT_SCORES as INTENT_SEPARATED_SCORES
+from .impact_intent_protocol import prepare_oracle_separated_package, run_oracle_free_predictions, score_frozen_predictions
 from .llm_evaluation import run_llm_experiment
 from .llm_repair import REPAIR_MODES
 from .llm_review import LLM_MODES
@@ -158,7 +162,7 @@ def _parser() -> argparse.ArgumentParser:
     intent.add_argument("--seed", type=int, default=INTENT_SEED)
     intent.add_argument("--cases-per-type", type=int, default=4)
     intent.add_argument("--prepare-only", action="store_true")
-    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the resumable v1.3 Qwen intent-grounding experiment")
+    intent_qwen = subparsers.add_parser("impact-intent-qwen", help="Run the combined v1.3 development diagnostic; do not use for held-out evaluation")
     intent_qwen.add_argument("--model", default="qwen2.5:7b")
     intent_qwen.add_argument("--benchmark", type=Path, default=INTENT_BENCHMARK)
     intent_qwen.add_argument("--output-dir", type=Path, default=INTENT_QWEN_OUTPUT)
@@ -168,6 +172,22 @@ def _parser() -> argparse.ArgumentParser:
     intent_qwen.add_argument("--seed", type=int, default=11107)
     intent_qwen.add_argument("--max-tokens", type=int, default=300)
     intent_qwen.add_argument("--profile", choices=("smoke", "development"), default="smoke")
+    intent_separate = subparsers.add_parser("impact-intent-separate", help="Create physically separate model-input and oracle-reference files")
+    intent_separate.add_argument("--benchmark", type=Path, default=INTENT_BENCHMARK)
+    intent_separate.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
+    intent_separate.add_argument("--catalog", type=Path, default=None)
+    intent_predict = subparsers.add_parser("impact-intent-predict", help="Run Qwen using only the oracle-free input package")
+    intent_predict.add_argument("--model", default="qwen2.5:7b")
+    intent_predict.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
+    intent_predict.add_argument("--output-dir", type=Path, default=INTENT_SEPARATED_PREDICTIONS)
+    intent_predict.add_argument("--base-url", default="http://localhost:11434")
+    intent_predict.add_argument("--timeout", type=float, default=900.0)
+    intent_predict.add_argument("--seed", type=int, default=11107)
+    intent_predict.add_argument("--max-tokens", type=int, default=300)
+    intent_score = subparsers.add_parser("impact-intent-score", help="Score frozen predictions against the separate oracle reference")
+    intent_score.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
+    intent_score.add_argument("--prediction-dir", type=Path, default=INTENT_SEPARATED_PREDICTIONS)
+    intent_score.add_argument("--output-dir", type=Path, default=INTENT_SEPARATED_SCORES)
     return parser
 
 
@@ -290,6 +310,18 @@ def main() -> None:
             "mode": "qwen_intent_graph", "profile": args.profile, "results": str(args.output_dir),
             "llm_calls": metrics["modes"]["qwen_intent_graph"]["llm_call_count"],
         }, indent=2))
+        return
+    if args.command == "impact-intent-separate":
+        manifest = prepare_oracle_separated_package(args.benchmark, args.package_dir, args.catalog)
+        print(json.dumps({"status": "prepared", "package_id": manifest["package_id"], "scenario_count": manifest["scenario_count"], "package": str(args.package_dir), "oracle_fields_present_in_model_input": False}, indent=2))
+        return
+    if args.command == "impact-intent-predict":
+        manifest = run_oracle_free_predictions(args.model, args.package_dir, args.output_dir, args.base_url, args.timeout, args.seed, args.max_tokens)
+        print(json.dumps({"status": "complete", "scenario_count": manifest["scenario_count"], "model": args.model, "predictions": str(args.output_dir), "oracle_file_read": False, "metrics_generated": False}, indent=2))
+        return
+    if args.command == "impact-intent-score":
+        metrics = score_frozen_predictions(args.package_dir, args.prediction_dir, args.output_dir)
+        print(json.dumps({"status": "complete", "scenario_count": metrics["scenario_count"], "model": metrics["model"], "results": str(args.output_dir), "scoring": "offline_oracle_only"}, indent=2))
         return
     if args.command == "llm-experiment":
         if not args.benchmark.exists():
