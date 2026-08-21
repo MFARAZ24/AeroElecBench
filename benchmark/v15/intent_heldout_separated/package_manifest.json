@@ -1,0 +1,42 @@
+{
+  "package_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0",
+  "protocol_version": "1.0.0",
+  "source_benchmark_id": "AEROELECBENCH-IMPACT-INTENT-HELDOUT-1.5",
+  "source_benchmark_sha256": "6031fc4d156e5748e7559b810115ae05dbcec81987021264d8a25c7ec0817560",
+  "split": "heldout",
+  "scenario_count": 30,
+  "model_input_file": "model_inputs.jsonl",
+  "model_input_sha256": "0a98b8dda881509e34a0c7306f53d9dff042f94e56ff8f9bb18b1455a28268e2",
+  "oracle_file": "oracle_reference.jsonl",
+  "oracle_sha256": "c55c012617ac8764a023f5dfd84fdc6af71c4d1271c5d161f7ebdb878fe24e0c",
+  "model_input_top_level_fields": [
+    "after_design",
+    "before_design",
+    "change_inventory",
+    "engineering_change_request",
+    "scenario_id"
+  ],
+  "forbidden_model_input_fields": [
+    "affected_node_ids",
+    "expected_action",
+    "impact_oracle",
+    "impact_paths",
+    "intended_candidate_ids",
+    "intent_case_type",
+    "intent_oracle",
+    "request_id",
+    "root_node_ids",
+    "source_scenario_id",
+    "split"
+  ],
+  "oracle_fields_present_in_model_input": false,
+  "case_type_present_in_model_input": false,
+  "opaque_scenario_ids": true,
+  "source_scenario_ids_present_in_model_input": false,
+  "case_order_blinded": true,
+  "frozen_prompt_version": "1.3.0",
+  "system_prompt_sha256": "a8479b8de17acc95876f2679f4281c4d869838cd9c8689b9cdb59b6b3dd99d6b",
+  "posthoc_tuning_allowed": false,
+  "prediction_and_scoring_commands_separate": true,
+  "production_modifications_allowed": false
+}

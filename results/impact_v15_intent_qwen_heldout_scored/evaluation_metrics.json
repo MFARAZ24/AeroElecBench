@@ -1,0 +1,32 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0-OFFLINE-SCORE-1.4",
+  "pipeline_version": "1.4.0",
+  "model": "qwen2.5:7b",
+  "scenario_count": 30,
+  "modes": {
+    "qwen_intent_graph": {
+      "mode": "qwen_intent_graph",
+      "scenario_count": 30,
+      "llm_call_count": 30,
+      "rejected_output_count": 0,
+      "candidate_precision": 0.6410256410256411,
+      "candidate_recall": 1.0,
+      "candidate_f1": 0.7812500000000001,
+      "candidate_exact_scenario_accuracy": 0.7,
+      "distractor_rejection_rate": 0.8526315789473684,
+      "root_precision": 0.6190476190476191,
+      "root_recall": 1.0,
+      "root_f1": 0.7647058823529412,
+      "root_exact_scenario_accuracy": 0.7,
+      "impact_set_precision": 0.7379912663755459,
+      "impact_set_recall": 1.0,
+      "impact_set_f1": 0.8492462311557789,
+      "impact_exact_scenario_accuracy": 0.7,
+      "path_precision": 0.7379912663755459,
+      "path_recall": 1.0,
+      "path_f1": 0.8492462311557789,
+      "oracle_action_accuracy": 0.7,
+      "production_modification_count": 0
+    }
+  }
+}

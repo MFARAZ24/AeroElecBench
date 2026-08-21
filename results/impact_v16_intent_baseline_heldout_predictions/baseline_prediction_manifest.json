@@ -1,0 +1,20 @@
+{
+  "prediction_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0-DETERMINISTIC-BASELINES-1.0",
+  "protocol_version": "1.0.0",
+  "package_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0",
+  "model_input_sha256": "0a98b8dda881509e34a0c7306f53d9dff042f94e56ff8f9bb18b1455a28268e2",
+  "prediction_file": "baseline_predictions.jsonl",
+  "prediction_sha256": "e4e6ab17582b74aeabca6e95d1a28a9cbf20c0a7aeac9d668b8c6f6a76e05314",
+  "scenario_count": 30,
+  "record_count": 60,
+  "modes": [
+    "all_diff_graph",
+    "lexical_intent_graph"
+  ],
+  "llm_calls_performed": 0,
+  "oracle_file_read": false,
+  "oracle_fields_available_to_predictor": false,
+  "metrics_generated": false,
+  "prediction_complete": true,
+  "production_modifications_allowed": false
+}

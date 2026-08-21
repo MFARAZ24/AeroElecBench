@@ -1,0 +1,18 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0-DETERMINISTIC-BASELINE-SCORE-1.0",
+  "pipeline_version": "1.4.0",
+  "package_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0",
+  "model_input_sha256": "0a98b8dda881509e34a0c7306f53d9dff042f94e56ff8f9bb18b1455a28268e2",
+  "oracle_sha256": "c55c012617ac8764a023f5dfd84fdc6af71c4d1271c5d161f7ebdb878fe24e0c",
+  "baseline_prediction_sha256": "e4e6ab17582b74aeabca6e95d1a28a9cbf20c0a7aeac9d668b8c6f6a76e05314",
+  "baseline_prediction_file_unchanged_during_scoring": true,
+  "prediction_and_scoring_processes_separate": true,
+  "oracle_loaded_only_by_scoring_command": true,
+  "intent_oracle_exposed_to_non_oracle_baselines": false,
+  "oracle_root_graph_role": "upper_bound",
+  "all_diff_graph_role": "intent_agnostic_control",
+  "lexical_intent_graph_role": "non_llm_intent_baseline",
+  "llm_calls_performed": 0,
+  "metric_generation": "deterministic_offline",
+  "production_modifications_allowed": false
+}

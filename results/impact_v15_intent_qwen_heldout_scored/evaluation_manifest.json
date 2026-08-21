@@ -1,0 +1,14 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0-OFFLINE-SCORE-1.4",
+  "pipeline_version": "1.4.0",
+  "package_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0",
+  "model_input_sha256": "0a98b8dda881509e34a0c7306f53d9dff042f94e56ff8f9bb18b1455a28268e2",
+  "oracle_sha256": "c55c012617ac8764a023f5dfd84fdc6af71c4d1271c5d161f7ebdb878fe24e0c",
+  "prediction_sha256": "33933b48913cd8f4ed281c88a5c84b2906af5ffbcb41d7536dc6d408e15cb1d4",
+  "prediction_file_unchanged_during_scoring": true,
+  "inference_and_scoring_processes_separate": true,
+  "oracle_loaded_only_by_scoring_command": true,
+  "oracle_correction_performed": false,
+  "metric_generation": "deterministic_offline",
+  "production_modifications_allowed": false
+}
