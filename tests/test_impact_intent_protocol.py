@@ -105,11 +105,13 @@ def test_heldout_deterministic_controls_use_oracle_separated_prediction_and_scor
         benchmark, package = root / "benchmark" / "heldout.jsonl", root / "package"
         predictions, scores = root / "baseline_predictions", root / "baseline_scores"
         prepare_intent_heldout(benchmark); prepare_oracle_separated_package(benchmark, package)
+        assert all(b"\r\n" not in (package / name).read_bytes() for name in (INPUT_FILE, ORACLE_FILE))
         oracle_bytes = (package / ORACLE_FILE).read_bytes(); (package / ORACLE_FILE).unlink()
         prediction_manifest = run_oracle_free_baselines(package, predictions)
         assert prediction_manifest["scenario_count"] == 30 and prediction_manifest["record_count"] == 60
         assert prediction_manifest["llm_calls_performed"] == 0 and prediction_manifest["oracle_file_read"] is False
         assert {path.name for path in predictions.iterdir()} == {BASELINE_PREDICTION_FILE, BASELINE_PREDICTION_MANIFEST}
+        assert b"\r\n" not in (predictions / BASELINE_PREDICTION_FILE).read_bytes()
         (package / ORACLE_FILE).write_bytes(oracle_bytes)
         metrics = score_frozen_baselines(package, predictions, scores)
         assert set(metrics["modes"]) == {"all_diff_graph", "lexical_intent_graph", "oracle_root_graph"}

@@ -1,1 +1,4 @@
 *.jsonl text eol=lf
+benchmark/v15/intent_heldout_separated/model_inputs.jsonl -text -eol
+benchmark/v15/intent_heldout_separated/oracle_reference.jsonl -text -eol
+results/impact_v16_intent_baseline_heldout_predictions/baseline_predictions.jsonl -text -eol

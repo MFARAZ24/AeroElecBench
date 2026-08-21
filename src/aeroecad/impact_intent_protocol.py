@@ -47,7 +47,7 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
+    path.write_bytes("".join(json.dumps(row, sort_keys=True) + "\n" for row in rows).encode("utf-8"))
 
 
 def _forbidden_keys(value: Any) -> set[str]:
