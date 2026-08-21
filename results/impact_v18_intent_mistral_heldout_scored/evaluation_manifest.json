@@ -1,0 +1,17 @@
+{
+  "evaluation_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0-MISTRAL_7B-OFFLINE-SCORE-1.8",
+  "pipeline_version": "1.4.0",
+  "model_provenance_version": "1.8.0",
+  "model": "mistral:7b",
+  "mode": "mistral_7b_intent_graph",
+  "package_id": "AEROELECBENCH-IMPACT-INTENT-ORACLE-SEPARATED-HELDOUT-1.0",
+  "model_input_sha256": "0a98b8dda881509e34a0c7306f53d9dff042f94e56ff8f9bb18b1455a28268e2",
+  "oracle_sha256": "c55c012617ac8764a023f5dfd84fdc6af71c4d1271c5d161f7ebdb878fe24e0c",
+  "prediction_sha256": "86d1db2026745a1367c56ce01fe49cba6c647a6630b9ad577bafd525283ba687",
+  "prediction_file_unchanged_during_scoring": true,
+  "inference_and_scoring_processes_separate": true,
+  "oracle_loaded_only_by_scoring_command": true,
+  "oracle_correction_performed": false,
+  "metric_generation": "deterministic_offline",
+  "production_modifications_allowed": false
+}
