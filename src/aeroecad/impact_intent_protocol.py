@@ -9,7 +9,7 @@ from typing import Any
 
 from .impact_graph import build_version_graph, traverse_impact
 from .impact_intent import BENCHMARK_ID as DEVELOPMENT_BENCHMARK_ID
-from .impact_intent import DEFAULT_BENCHMARK, evaluate_intent_predictions, load_frozen_intent_benchmark, resolve_candidate_roots
+from .impact_intent import DEFAULT_BENCHMARK, _lexical_selection, evaluate_intent_predictions, load_frozen_intent_benchmark, resolve_candidate_roots
 from .impact_intent_llm import MODE, PIPELINE_VERSION as PROMPT_VERSION, RESPONSE_SCHEMA, SYSTEM_PROMPT, build_intent_prompt, parse_intent_response
 from .ollama import OllamaClient
 
@@ -18,11 +18,16 @@ PIPELINE_VERSION = "1.4.0"
 DEFAULT_PACKAGE = Path("benchmark/v14/intent_development_separated")
 DEFAULT_PREDICTIONS = Path("results/impact_v14_intent_predictions")
 DEFAULT_SCORES = Path("results/impact_v14_intent_scores")
+DEFAULT_BASELINE_PREDICTIONS = Path("results/impact_v16_intent_baseline_predictions")
+DEFAULT_BASELINE_SCORES = Path("results/impact_v16_intent_baseline_scores")
 INPUT_FILE = "model_inputs.jsonl"
 ORACLE_FILE = "oracle_reference.jsonl"
 PACKAGE_MANIFEST = "package_manifest.json"
 PREDICTION_FILE = "intent_predictions.jsonl"
 PREDICTION_MANIFEST = "prediction_manifest.json"
+BASELINE_PREDICTION_FILE = "baseline_predictions.jsonl"
+BASELINE_PREDICTION_MANIFEST = "baseline_prediction_manifest.json"
+ORACLE_FREE_BASELINE_MODES = ("all_diff_graph", "lexical_intent_graph")
 FORBIDDEN_INPUT_KEYS = frozenset({"intent_case_type", "intent_oracle", "impact_oracle", "expected_action", "intended_candidate_ids", "root_node_ids", "affected_node_ids", "impact_paths", "split", "request_id", "source_scenario_id"})
 REQUIRED_INPUT_KEYS = frozenset({"scenario_id", "before_design", "after_design", "engineering_change_request", "change_inventory"})
 
@@ -254,6 +259,111 @@ def score_frozen_predictions(
         "inference_and_scoring_processes_separate": True, "oracle_loaded_only_by_scoring_command": True,
         "oracle_correction_performed": False, "metric_generation": "deterministic_offline",
         "production_modifications_allowed": False,
+    }
+    (output / "evaluation_manifest.json").write_text(json.dumps(score_manifest, indent=2) + "\n", encoding="utf-8")
+    return aggregate
+
+
+def _baseline_selection(mode: str, scenario: dict[str, Any]) -> dict[str, Any]:
+    selected = [item["candidate_id"] for item in scenario["change_inventory"]] if mode == "all_diff_graph" else _lexical_selection(scenario)
+    return {"action": "report" if selected else "abstain", "selected_candidate_ids": selected}
+
+
+def run_oracle_free_baselines(
+    package_dir: str | Path = DEFAULT_PACKAGE, output_dir: str | Path = DEFAULT_BASELINE_PREDICTIONS,
+) -> dict[str, Any]:
+    scenarios, package_manifest = load_oracle_free_package(package_dir)
+    output = Path(output_dir); output.mkdir(parents=True, exist_ok=True)
+    record_path = output / BASELINE_PREDICTION_FILE
+    records = [
+        {
+            "scenario_id": scenario["scenario_id"], "mode": mode, "selection": _baseline_selection(mode, scenario),
+            "package_id": package_manifest["package_id"], "model_input_sha256": package_manifest["model_input_sha256"],
+            "oracle_file_read": False, "oracle_fields_available_to_predictor": False, "llm_call_count": 0,
+        }
+        for mode in ORACLE_FREE_BASELINE_MODES for scenario in scenarios
+    ]
+    _write_jsonl(record_path, records)
+    manifest = {
+        "prediction_id": f"{package_manifest['package_id']}-DETERMINISTIC-BASELINES-1.0",
+        "protocol_version": PROTOCOL_VERSION, "package_id": package_manifest["package_id"],
+        "model_input_sha256": package_manifest["model_input_sha256"], "prediction_file": BASELINE_PREDICTION_FILE,
+        "prediction_sha256": _sha256(record_path), "scenario_count": len(scenarios), "record_count": len(records),
+        "modes": list(ORACLE_FREE_BASELINE_MODES), "llm_calls_performed": 0, "oracle_file_read": False,
+        "oracle_fields_available_to_predictor": False, "metrics_generated": False,
+        "prediction_complete": True, "production_modifications_allowed": False,
+    }
+    (output / BASELINE_PREDICTION_MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return manifest
+
+
+def score_frozen_baselines(
+    package_dir: str | Path = DEFAULT_PACKAGE, prediction_dir: str | Path = DEFAULT_BASELINE_PREDICTIONS,
+    output_dir: str | Path = DEFAULT_BASELINE_SCORES,
+) -> dict[str, Any]:
+    inputs, package_manifest = load_oracle_free_package(package_dir)
+    package, predictions = Path(package_dir), Path(prediction_dir)
+    oracle_path = package / package_manifest["oracle_file"]
+    if _sha256(oracle_path) != package_manifest.get("oracle_sha256"):
+        raise ValueError("Oracle-reference hash mismatch")
+    manifest_path = predictions / BASELINE_PREDICTION_MANIFEST
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Completed baseline prediction manifest not found: {manifest_path}")
+    prediction_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record_path = predictions / BASELINE_PREDICTION_FILE
+    prediction_hash = _sha256(record_path)
+    if (
+        prediction_manifest.get("prediction_sha256") != prediction_hash
+        or prediction_manifest.get("package_id") != package_manifest["package_id"]
+        or prediction_manifest.get("model_input_sha256") != package_manifest["model_input_sha256"]
+        or prediction_manifest.get("modes") != list(ORACLE_FREE_BASELINE_MODES)
+        or not prediction_manifest.get("prediction_complete")
+    ):
+        raise ValueError("Frozen baseline prediction identity or hash mismatch")
+    oracle_rows = _read_jsonl(oracle_path); oracle_by_id = {row["scenario_id"]: row for row in oracle_rows}
+    input_ids = {row["scenario_id"] for row in inputs}
+    if len(oracle_by_id) != len(oracle_rows) or set(oracle_by_id) != input_ids:
+        raise ValueError("Oracle-reference scenario identity mismatch")
+    records = _read_jsonl(record_path)
+    expected_pairs = {(scenario_id, mode) for scenario_id in input_ids for mode in ORACLE_FREE_BASELINE_MODES}
+    record_pairs = [(row.get("scenario_id"), row.get("mode")) for row in records]
+    if len(record_pairs) != len(set(record_pairs)) or set(record_pairs) != expected_pairs:
+        raise ValueError("Baseline prediction scenario or mode identity mismatch")
+    scenarios = [{**row, **oracle_by_id[row["scenario_id"]]} for row in inputs]
+    metrics_by_mode, rows = {}, []
+    for mode in ORACLE_FREE_BASELINE_MODES:
+        selections = {row["scenario_id"]: row["selection"] for row in records if row["mode"] == mode}
+        metrics_by_mode[mode], mode_rows = evaluate_intent_predictions(scenarios, selections, mode)
+        rows.extend(mode_rows)
+    oracle_selections = {
+        row["scenario_id"]: {
+            "action": row["intent_oracle"]["expected_action"],
+            "selected_candidate_ids": row["intent_oracle"]["intended_candidate_ids"],
+        }
+        for row in scenarios
+    }
+    metrics_by_mode["oracle_root_graph"], oracle_rows = evaluate_intent_predictions(scenarios, oracle_selections, "oracle_root_graph")
+    rows.extend(oracle_rows)
+    aggregate = {
+        "evaluation_id": f"{package_manifest['package_id']}-DETERMINISTIC-BASELINE-SCORE-1.0",
+        "pipeline_version": PIPELINE_VERSION, "scenario_count": len(scenarios), "modes": metrics_by_mode,
+    }
+    output = Path(output_dir); output.mkdir(parents=True, exist_ok=True)
+    (output / "evaluation_metrics.json").write_text(json.dumps(aggregate, indent=2) + "\n", encoding="utf-8")
+    fields = list(next(iter(metrics_by_mode.values())))
+    with (output / "evaluation_table.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fields); writer.writeheader(); writer.writerows(metrics_by_mode.values())
+    with (output / "scenario_table.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0])); writer.writeheader(); writer.writerows(rows)
+    score_manifest = {
+        "evaluation_id": aggregate["evaluation_id"], "pipeline_version": PIPELINE_VERSION,
+        "package_id": package_manifest["package_id"], "model_input_sha256": package_manifest["model_input_sha256"],
+        "oracle_sha256": package_manifest["oracle_sha256"], "baseline_prediction_sha256": prediction_hash,
+        "baseline_prediction_file_unchanged_during_scoring": _sha256(record_path) == prediction_hash,
+        "prediction_and_scoring_processes_separate": True, "oracle_loaded_only_by_scoring_command": True,
+        "intent_oracle_exposed_to_non_oracle_baselines": False, "oracle_root_graph_role": "upper_bound",
+        "all_diff_graph_role": "intent_agnostic_control", "lexical_intent_graph_role": "non_llm_intent_baseline",
+        "llm_calls_performed": 0, "metric_generation": "deterministic_offline", "production_modifications_allowed": False,
     }
     (output / "evaluation_manifest.json").write_text(json.dumps(score_manifest, indent=2) + "\n", encoding="utf-8")
     return aggregate

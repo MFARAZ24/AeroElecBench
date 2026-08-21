@@ -38,9 +38,11 @@ from .impact_intent_heldout_v15 import DEFAULT_PACKAGE as INTENT_HELDOUT_PACKAGE
 from .impact_intent_heldout_v15 import DEFAULT_SEED as INTENT_HELDOUT_SEED
 from .impact_intent_heldout_v15 import prepare_intent_heldout
 from .impact_intent_protocol import DEFAULT_PACKAGE as INTENT_SEPARATED_PACKAGE
+from .impact_intent_protocol import DEFAULT_BASELINE_PREDICTIONS as INTENT_BASELINE_PREDICTIONS
+from .impact_intent_protocol import DEFAULT_BASELINE_SCORES as INTENT_BASELINE_SCORES
 from .impact_intent_protocol import DEFAULT_PREDICTIONS as INTENT_SEPARATED_PREDICTIONS
 from .impact_intent_protocol import DEFAULT_SCORES as INTENT_SEPARATED_SCORES
-from .impact_intent_protocol import prepare_oracle_separated_package, run_oracle_free_predictions, score_frozen_predictions
+from .impact_intent_protocol import prepare_oracle_separated_package, run_oracle_free_baselines, run_oracle_free_predictions, score_frozen_baselines, score_frozen_predictions
 from .llm_evaluation import run_llm_experiment
 from .llm_repair import REPAIR_MODES
 from .llm_review import LLM_MODES
@@ -193,6 +195,13 @@ def _parser() -> argparse.ArgumentParser:
     intent_score.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
     intent_score.add_argument("--prediction-dir", type=Path, default=INTENT_SEPARATED_PREDICTIONS)
     intent_score.add_argument("--output-dir", type=Path, default=INTENT_SEPARATED_SCORES)
+    baseline_predict = subparsers.add_parser("impact-intent-baseline-predict", help="Freeze deterministic controls using only the oracle-free input package")
+    baseline_predict.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
+    baseline_predict.add_argument("--output-dir", type=Path, default=INTENT_BASELINE_PREDICTIONS)
+    baseline_score = subparsers.add_parser("impact-intent-baseline-score", help="Score frozen deterministic controls against the separate oracle reference")
+    baseline_score.add_argument("--package-dir", type=Path, default=INTENT_SEPARATED_PACKAGE)
+    baseline_score.add_argument("--prediction-dir", type=Path, default=INTENT_BASELINE_PREDICTIONS)
+    baseline_score.add_argument("--output-dir", type=Path, default=INTENT_BASELINE_SCORES)
     intent_heldout = subparsers.add_parser("impact-intent-heldout-prepare", help="Freeze the v1.5 held-out benchmark and oracle-separated input package without model calls")
     intent_heldout.add_argument("--benchmark", type=Path, default=INTENT_HELDOUT_BENCHMARK)
     intent_heldout.add_argument("--package-dir", type=Path, default=INTENT_HELDOUT_PACKAGE)
@@ -334,6 +343,14 @@ def main() -> None:
     if args.command == "impact-intent-score":
         metrics = score_frozen_predictions(args.package_dir, args.prediction_dir, args.output_dir)
         print(json.dumps({"status": "complete", "scenario_count": metrics["scenario_count"], "model": metrics["model"], "results": str(args.output_dir), "scoring": "offline_oracle_only"}, indent=2))
+        return
+    if args.command == "impact-intent-baseline-predict":
+        manifest = run_oracle_free_baselines(args.package_dir, args.output_dir)
+        print(json.dumps({"status": "complete", "scenario_count": manifest["scenario_count"], "modes": manifest["modes"], "predictions": str(args.output_dir), "llm_calls": 0, "oracle_file_read": False, "metrics_generated": False}, indent=2))
+        return
+    if args.command == "impact-intent-baseline-score":
+        metrics = score_frozen_baselines(args.package_dir, args.prediction_dir, args.output_dir)
+        print(json.dumps({"status": "complete", "scenario_count": metrics["scenario_count"], "modes": list(metrics["modes"]), "results": str(args.output_dir), "scoring": "offline_oracle_only", "llm_calls": 0}, indent=2))
         return
     if args.command == "impact-intent-heldout-prepare":
         scenarios, benchmark_manifest = prepare_intent_heldout(args.benchmark, args.catalog, args.source_registry, args.seed, args.cases_per_type)

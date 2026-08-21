@@ -8,15 +8,20 @@ import pytest
 
 from aeroecad.impact_intent import prepare_intent_development
 from aeroecad.impact_intent_protocol import (
+    BASELINE_PREDICTION_FILE,
+    BASELINE_PREDICTION_MANIFEST,
     FORBIDDEN_INPUT_KEYS,
     INPUT_FILE,
     ORACLE_FILE,
     PREDICTION_FILE,
     PREDICTION_MANIFEST,
     prepare_oracle_separated_package,
+    run_oracle_free_baselines,
     run_oracle_free_predictions,
+    score_frozen_baselines,
     score_frozen_predictions,
 )
+from aeroecad.impact_intent_heldout_v15 import prepare_intent_heldout
 from aeroecad.ollama import OllamaResponse
 
 
@@ -92,3 +97,37 @@ def test_oracle_free_input_and_frozen_prediction_tampering_are_rejected() -> Non
         record_path.write_text(record_path.read_text(encoding="utf-8") + "{}\n", encoding="utf-8")
         with pytest.raises(ValueError, match="prediction identity or hash mismatch"):
             score_frozen_predictions(package, predictions, root / "scores")
+
+
+def test_heldout_deterministic_controls_use_oracle_separated_prediction_and_scoring() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        benchmark, package = root / "benchmark" / "heldout.jsonl", root / "package"
+        predictions, scores = root / "baseline_predictions", root / "baseline_scores"
+        prepare_intent_heldout(benchmark); prepare_oracle_separated_package(benchmark, package)
+        oracle_bytes = (package / ORACLE_FILE).read_bytes(); (package / ORACLE_FILE).unlink()
+        prediction_manifest = run_oracle_free_baselines(package, predictions)
+        assert prediction_manifest["scenario_count"] == 30 and prediction_manifest["record_count"] == 60
+        assert prediction_manifest["llm_calls_performed"] == 0 and prediction_manifest["oracle_file_read"] is False
+        assert {path.name for path in predictions.iterdir()} == {BASELINE_PREDICTION_FILE, BASELINE_PREDICTION_MANIFEST}
+        (package / ORACLE_FILE).write_bytes(oracle_bytes)
+        metrics = score_frozen_baselines(package, predictions, scores)
+        assert set(metrics["modes"]) == {"all_diff_graph", "lexical_intent_graph", "oracle_root_graph"}
+        assert metrics["modes"]["oracle_root_graph"]["candidate_f1"] == 1.0
+        score_manifest = json.loads((scores / "evaluation_manifest.json").read_text(encoding="utf-8"))
+        assert score_manifest["oracle_loaded_only_by_scoring_command"] is True
+        assert score_manifest["intent_oracle_exposed_to_non_oracle_baselines"] is False
+        assert score_manifest["baseline_prediction_file_unchanged_during_scoring"] is True
+
+
+def test_tampered_oracle_free_baseline_predictions_are_rejected() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        benchmark, package = root / "benchmark" / "intent.jsonl", root / "package"
+        predictions = root / "baseline_predictions"
+        prepare_intent_development(benchmark, cases_per_type=1); prepare_oracle_separated_package(benchmark, package)
+        run_oracle_free_baselines(package, predictions)
+        record_path = predictions / BASELINE_PREDICTION_FILE
+        record_path.write_text(record_path.read_text(encoding="utf-8") + "{}\n", encoding="utf-8")
+        with pytest.raises(ValueError, match="identity or hash mismatch"):
+            score_frozen_baselines(package, predictions, root / "scores")
