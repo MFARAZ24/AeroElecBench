@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,7 @@ from .ollama import OllamaClient
 
 PROTOCOL_VERSION = "1.0.0"
 PIPELINE_VERSION = "1.4.0"
+MODEL_PROVENANCE_VERSION = "1.8.0"
 DEFAULT_PACKAGE = Path("benchmark/v14/intent_development_separated")
 DEFAULT_PREDICTIONS = Path("results/impact_v14_intent_predictions")
 DEFAULT_SCORES = Path("results/impact_v14_intent_scores")
@@ -30,6 +32,32 @@ BASELINE_PREDICTION_MANIFEST = "baseline_prediction_manifest.json"
 ORACLE_FREE_BASELINE_MODES = ("all_diff_graph", "lexical_intent_graph")
 FORBIDDEN_INPUT_KEYS = frozenset({"intent_case_type", "intent_oracle", "impact_oracle", "expected_action", "intended_candidate_ids", "root_node_ids", "affected_node_ids", "impact_paths", "split", "request_id", "source_scenario_id"})
 REQUIRED_INPUT_KEYS = frozenset({"scenario_id", "before_design", "after_design", "engineering_change_request", "change_inventory"})
+
+
+def intent_mode_for_model(model: str) -> str:
+    """Return a stable result mode without changing the frozen Qwen identity."""
+    if model == "qwen2.5:7b":
+        return MODE
+    slug = re.sub(r"[^a-z0-9]+", "_", model.strip().lower()).strip("_")
+    if not slug:
+        raise ValueError("Model name must contain at least one letter or digit")
+    return f"{slug}_intent_graph"
+
+
+def _model_token(model: str) -> str:
+    return intent_mode_for_model(model).removesuffix("_intent_graph").upper()
+
+
+def _prediction_id(package_id: str, model: str) -> str:
+    if model == "qwen2.5:7b":
+        return f"{package_id}-QWEN-PREDICTIONS-1.4"
+    return f"{package_id}-{_model_token(model)}-PREDICTIONS-1.8"
+
+
+def _evaluation_id(package_id: str, model: str) -> str:
+    if model == "qwen2.5:7b":
+        return f"{package_id}-OFFLINE-SCORE-1.4"
+    return f"{package_id}-{_model_token(model)}-OFFLINE-SCORE-1.8"
 
 
 def _sha256(path: Path) -> str:
@@ -159,8 +187,9 @@ def _read_predictions(path: Path, model: str, manifest: dict[str, Any], allowed_
     rows = _read_jsonl(path)
     if len(rows) != len({row.get("scenario_id") for row in rows}):
         raise ValueError(f"Duplicate prediction records in {path}")
+    expected_mode = intent_mode_for_model(model)
     for row in rows:
-        if row.get("pipeline_version") != PIPELINE_VERSION or row.get("prompt_version") != PROMPT_VERSION or row.get("model") != model or row.get("package_id") != manifest["package_id"] or row.get("model_input_sha256") != manifest["model_input_sha256"] or row.get("scenario_id") not in allowed_ids:
+        if row.get("pipeline_version") != PIPELINE_VERSION or row.get("prompt_version") != PROMPT_VERSION or row.get("model") != model or row.get("mode") != expected_mode or row.get("package_id") != manifest["package_id"] or row.get("model_input_sha256") != manifest["model_input_sha256"] or row.get("scenario_id") not in allowed_ids:
             raise ValueError(f"Existing prediction provenance mismatch in {path}")
     return {row["scenario_id"]: row for row in rows}
 
@@ -172,20 +201,21 @@ def run_oracle_free_predictions(
     client: OllamaClient | None = None,
 ) -> dict[str, Any]:
     scenarios, package_manifest = load_oracle_free_package(package_dir)
+    mode = intent_mode_for_model(model)
     output, record_path = Path(output_dir), Path(output_dir) / PREDICTION_FILE
     runtime = client or OllamaClient(base_url, timeout); runtime.ensure_models([model])
     existing = _read_predictions(record_path, model, package_manifest, {item["scenario_id"] for item in scenarios})
     completed = sum(int(row["llm_call_count"]) for row in existing.values())
-    print(f"[intent-predict] oracle-free scenarios={len(scenarios)} records={len(existing)}/{len(scenarios)} Qwen calls={completed}/{len(scenarios)}; remaining={len(scenarios) - completed}", flush=True)
+    print(f"[intent-predict] oracle-free scenarios={len(scenarios)} records={len(existing)}/{len(scenarios)} model={model} calls={completed}/{len(scenarios)}; remaining={len(scenarios) - completed}", flush=True)
     for index, scenario in enumerate(scenarios, start=1):
         if scenario["scenario_id"] in existing:
             continue
-        print(f"[intent-predict] scenario {index}/{len(scenarios)} {scenario['scenario_id']} - starting Qwen call {completed + 1}/{len(scenarios)}; remaining={len(scenarios) - completed}", flush=True)
+        print(f"[intent-predict] scenario {index}/{len(scenarios)} {scenario['scenario_id']} - starting {model} call {completed + 1}/{len(scenarios)}; remaining={len(scenarios) - completed}", flush=True)
         started, prompt = time.perf_counter(), build_intent_prompt(scenario)
         response = runtime.chat(model, SYSTEM_PROMPT, prompt, seed=seed, max_tokens=max_tokens, response_schema=RESPONSE_SCHEMA)
         selection, diagnostics = parse_intent_response(response.content, scenario)
         record = {
-            "scenario_id": scenario["scenario_id"], "model": model, "mode": MODE,
+            "scenario_id": scenario["scenario_id"], "model": model, "mode": mode,
             "pipeline_version": PIPELINE_VERSION, "prompt_version": PROMPT_VERSION,
             "package_id": package_manifest["package_id"], "model_input_sha256": package_manifest["model_input_sha256"],
             "llm_call_count": 1, "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
@@ -198,12 +228,13 @@ def run_oracle_free_predictions(
         with record_path.open("a", encoding="utf-8", newline="\n") as handle:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
         existing[scenario["scenario_id"]] = record; completed += 1
-        print(f"[intent-predict] completed {len(existing)}/{len(scenarios)} action={selection['action']} candidates={len(selection['selected_candidate_ids'])} elapsed={time.perf_counter() - started:.1f}s; Qwen remaining={len(scenarios) - completed}", flush=True)
+        print(f"[intent-predict] completed {len(existing)}/{len(scenarios)} action={selection['action']} candidates={len(selection['selected_candidate_ids'])} elapsed={time.perf_counter() - started:.1f}s; remaining={len(scenarios) - completed}", flush=True)
     manifest = {
-        "prediction_id": f"{package_manifest['package_id']}-QWEN-PREDICTIONS-1.4",
+        "prediction_id": _prediction_id(package_manifest["package_id"], model),
         "pipeline_version": PIPELINE_VERSION, "prompt_version": PROMPT_VERSION, "package_id": package_manifest["package_id"],
         "model_input_sha256": package_manifest["model_input_sha256"], "prediction_file": PREDICTION_FILE,
-        "prediction_sha256": _sha256(record_path), "scenario_count": len(scenarios), "model": model,
+        "prediction_sha256": _sha256(record_path), "scenario_count": len(scenarios), "model": model, "mode": mode,
+        "model_provenance_version": MODEL_PROVENANCE_VERSION,
         "seed": seed, "temperature": 0, "max_tokens": max_tokens, "llm_call_count": completed,
         "oracle_file_read": False, "oracle_fields_available_to_predictor": False,
         "intent_oracle_exposed_to_model": False, "impact_oracle_exposed_to_model": False,
@@ -234,16 +265,24 @@ def score_frozen_predictions(
     oracle_by_id = {row["scenario_id"]: row for row in oracle_rows}
     if len(oracle_by_id) != len(oracle_rows) or set(oracle_by_id) != {row["scenario_id"] for row in inputs}:
         raise ValueError("Oracle-reference scenario identity mismatch")
-    records = _read_jsonl(record_path)
-    if len(records) != len(inputs) or {row["scenario_id"] for row in records} != set(oracle_by_id):
+    model = prediction_manifest.get("model")
+    if not isinstance(model, str) or not model:
+        raise ValueError("Frozen prediction model is missing")
+    mode = intent_mode_for_model(model)
+    if prediction_manifest.get("mode", mode) != mode:
+        raise ValueError("Frozen prediction mode does not match model identity")
+    records_by_id = _read_predictions(record_path, model, package_manifest, set(oracle_by_id))
+    if len(records_by_id) != len(inputs) or set(records_by_id) != set(oracle_by_id):
         raise ValueError("Prediction scenario identity mismatch")
+    records = list(records_by_id.values())
     scenarios = [{**row, **oracle_by_id[row["scenario_id"]]} for row in inputs]
     selections = {row["scenario_id"]: row["selection"] for row in records}
     rejected = sum(row["selection"]["action"] == "rejected" for row in records)
-    metrics, rows = evaluate_intent_predictions(scenarios, selections, MODE, prediction_manifest["llm_call_count"], rejected)
+    metrics, rows = evaluate_intent_predictions(scenarios, selections, mode, prediction_manifest["llm_call_count"], rejected)
     aggregate = {
-        "evaluation_id": f"{package_manifest['package_id']}-OFFLINE-SCORE-1.4", "pipeline_version": PIPELINE_VERSION,
-        "model": prediction_manifest["model"], "scenario_count": len(scenarios), "modes": {MODE: metrics},
+        "evaluation_id": _evaluation_id(package_manifest["package_id"], model), "pipeline_version": PIPELINE_VERSION,
+        "model_provenance_version": prediction_manifest.get("model_provenance_version", PIPELINE_VERSION),
+        "model": model, "mode": mode, "scenario_count": len(scenarios), "modes": {mode: metrics},
     }
     output = Path(output_dir); output.mkdir(parents=True, exist_ok=True)
     (output / "evaluation_metrics.json").write_text(json.dumps(aggregate, indent=2) + "\n", encoding="utf-8")
@@ -253,6 +292,7 @@ def score_frozen_predictions(
         writer = csv.DictWriter(handle, fieldnames=list(rows[0])); writer.writeheader(); writer.writerows(rows)
     score_manifest = {
         "evaluation_id": aggregate["evaluation_id"], "pipeline_version": PIPELINE_VERSION,
+        "model_provenance_version": aggregate["model_provenance_version"], "model": model, "mode": mode,
         "package_id": package_manifest["package_id"], "model_input_sha256": package_manifest["model_input_sha256"],
         "oracle_sha256": package_manifest["oracle_sha256"], "prediction_sha256": prediction_hash,
         "prediction_file_unchanged_during_scoring": _sha256(record_path) == prediction_hash,

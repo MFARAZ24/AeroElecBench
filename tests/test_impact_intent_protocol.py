@@ -15,6 +15,7 @@ from aeroecad.impact_intent_protocol import (
     ORACLE_FILE,
     PREDICTION_FILE,
     PREDICTION_MANIFEST,
+    intent_mode_for_model,
     prepare_oracle_separated_package,
     run_oracle_free_baselines,
     run_oracle_free_predictions,
@@ -97,6 +98,47 @@ def test_oracle_free_input_and_frozen_prediction_tampering_are_rejected() -> Non
         record_path.write_text(record_path.read_text(encoding="utf-8") + "{}\n", encoding="utf-8")
         with pytest.raises(ValueError, match="prediction identity or hash mismatch"):
             score_frozen_predictions(package, predictions, root / "scores")
+
+
+def test_non_qwen_predictions_have_model_specific_provenance_and_mode() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        benchmark, package = root / "benchmark" / "intent.jsonl", root / "package"
+        predictions, scores = root / "predictions", root / "scores"
+        prepare_intent_development(benchmark, cases_per_type=1)
+        prepare_oracle_separated_package(benchmark, package)
+        oracle_bytes = (package / ORACLE_FILE).read_bytes()
+        (package / ORACLE_FILE).unlink()
+        manifest = run_oracle_free_predictions(
+            model="llama3.1:8b", package_dir=package, output_dir=predictions, client=PerfectIntentClient()
+        )
+        mode = "llama3_1_8b_intent_graph"
+        assert intent_mode_for_model("qwen2.5:7b") == "qwen_intent_graph"
+        assert intent_mode_for_model("llama3.1:8b") == mode
+        assert manifest["mode"] == mode
+        assert manifest["prediction_id"].endswith("-LLAMA3_1_8B-PREDICTIONS-1.8")
+        records = [json.loads(line) for line in (predictions / PREDICTION_FILE).read_text(encoding="utf-8").splitlines()]
+        assert {row["mode"] for row in records} == {mode}
+        (package / ORACLE_FILE).write_bytes(oracle_bytes)
+        metrics = score_frozen_predictions(package, predictions, scores)
+        assert metrics["mode"] == mode and set(metrics["modes"]) == {mode}
+        assert metrics["modes"][mode]["candidate_f1"] == 1.0
+
+
+def test_existing_qwen_manifest_without_mode_remains_scoreable() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        benchmark, package = root / "benchmark" / "intent.jsonl", root / "package"
+        predictions, scores = root / "predictions", root / "scores"
+        prepare_intent_development(benchmark, cases_per_type=1)
+        prepare_oracle_separated_package(benchmark, package)
+        manifest = run_oracle_free_predictions(package_dir=package, output_dir=predictions, client=PerfectIntentClient())
+        manifest.pop("mode")
+        manifest.pop("model_provenance_version")
+        (predictions / PREDICTION_MANIFEST).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        metrics = score_frozen_predictions(package, predictions, scores)
+        assert metrics["evaluation_id"].endswith("-OFFLINE-SCORE-1.4")
+        assert metrics["mode"] == "qwen_intent_graph"
 
 
 def test_heldout_deterministic_controls_use_oracle_separated_prediction_and_scoring() -> None:

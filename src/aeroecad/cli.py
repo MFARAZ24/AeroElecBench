@@ -338,11 +338,11 @@ def main() -> None:
         return
     if args.command == "impact-intent-predict":
         manifest = run_oracle_free_predictions(args.model, args.package_dir, args.output_dir, args.base_url, args.timeout, args.seed, args.max_tokens)
-        print(json.dumps({"status": "complete", "scenario_count": manifest["scenario_count"], "model": args.model, "predictions": str(args.output_dir), "oracle_file_read": False, "metrics_generated": False}, indent=2))
+        print(json.dumps({"status": "complete", "scenario_count": manifest["scenario_count"], "model": args.model, "mode": manifest["mode"], "predictions": str(args.output_dir), "oracle_file_read": False, "metrics_generated": False}, indent=2))
         return
     if args.command == "impact-intent-score":
         metrics = score_frozen_predictions(args.package_dir, args.prediction_dir, args.output_dir)
-        print(json.dumps({"status": "complete", "scenario_count": metrics["scenario_count"], "model": metrics["model"], "results": str(args.output_dir), "scoring": "offline_oracle_only"}, indent=2))
+        print(json.dumps({"status": "complete", "scenario_count": metrics["scenario_count"], "model": metrics["model"], "mode": metrics["mode"], "results": str(args.output_dir), "scoring": "offline_oracle_only"}, indent=2))
         return
     if args.command == "impact-intent-baseline-predict":
         manifest = run_oracle_free_baselines(args.package_dir, args.output_dir)
